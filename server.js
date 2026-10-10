@@ -2993,36 +2993,12 @@ async function startServer() {
 
   server.listen(PORT, '0.0.0.0', async () => {
     console.log(`\n✦ Danumes v24 (Turso) → порт ${PORT}\n`);
-
-    try {
-      const botResult = await botService.initBot(null, {
-        onLink: vkOnLink,
-        onMessage: null
-      });
-      if (botResult.ok) console.log(`✅ VK-бот: ${botResult.groupName}`);
-      else console.log(`⚠️  VK-бот: ${botResult.error || 'ошибка'}`);
-    } catch (e) { console.log('⚠️  VK-бот не запущен:', e.message); }
-
-    try {
-      const emailResult = emailService.initEmail();
-      if (emailResult.ok) console.log(`✅ Email: ${emailResult.email}`);
-      else console.log(`⚠️  Email: ${emailResult.error || 'ошибка'}`);
-    } catch (e) { console.log('⚠️  Email не запущен:', e.message); }
-
-    try {
-      const googleResult = googleOAuthService.initGoogle();
-      if (googleResult.ok) console.log('✅ Google OAuth готов');
-      else console.log(`⚠️  Google: ${googleResult.error || 'ошибка'}`);
-    } catch (e) { console.log('⚠️  Google OAuth не запущен:', e.message); }
-
+    console.log('⏭️  VK-бот: отключён');
+    console.log('⏭️  Email: отключён');
+    console.log('⏭️  Google OAuth: отключён');
     console.log('\n🚀 Сервер готов\n');
   });
 }
-
-startServer().catch(err => {
-  console.error('❌ Ошибка запуска:', err);
-  process.exit(1);
-});
 
 /* ============================================================
    КОНЕЦ ФАЙЛА server.js
