@@ -2410,6 +2410,122 @@ function initHotkeys() {
 }
 
 /* ============================================================
+   ПОИСК ПО СООБЩЕНИЯМ ВНУТРИ ЧАТА
+   ============================================================ */
+function initChatSearch() {
+  const btn = $('btnSearchInChat');
+  const bar = $('chatSearchBar');
+  const input = $('chatSearchInput');
+  const closeBtn = $('chatSearchClose');
+  const countEl = $('chatSearchCount');
+  const resultsEl = $('chatSearchResults');
+  if (!btn || !bar || !input || !resultsEl) return;
+
+  let searchActive = false;
+
+  function openSearch() {
+    searchActive = true;
+    bar.style.display = 'block';
+    input.value = '';
+    countEl.textContent = '0';
+    resultsEl.innerHTML = '';
+    setTimeout(() => input.focus(), 100);
+  }
+
+  function closeSearch() {
+    searchActive = false;
+    bar.style.display = 'none';
+    resultsEl.innerHTML = '';
+    countEl.textContent = '0';
+  }
+
+  btn.onclick = () => {
+    if (searchActive) closeSearch();
+    else openSearch();
+  };
+
+  closeBtn.onclick = closeSearch;
+
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    if (!q) {
+      resultsEl.innerHTML = '';
+      countEl.textContent = '0';
+      return;
+    }
+    const msgs = messagesByChat.get(currentChatId) || [];
+    const found = [];
+    msgs.forEach((m, idx) => {
+      if (m.deleted) return;
+      if (!m.text) return;
+      if (m.text.toLowerCase().includes(q)) {
+        found.push({ msg: m, index: idx });
+      }
+    });
+    countEl.textContent = found.length.toString();
+    if (found.length === 0) {
+      resultsEl.innerHTML = '<div class="cs-empty">Ничего не найдено</div>';
+      return;
+    }
+    let html = '';
+    found.slice(0, 50).forEach(item => {
+      const m = item.msg;
+      const user = usersMap.get(keyOf(m.userId));
+      const username = user ? user.username : (m.username || 'Unknown');
+      const color = user ? (user.color || m.color || '#a78bfa') : (m.color || '#a78bfa');
+      const avaUrl = user ? user.avatarUrl : m.avatarUrl;
+      const avaEmoji = user ? user.avatar : m.avatar;
+      let avaHtml = '';
+      if (avaUrl) avaHtml = `<div class="cs-result-ava" style="background-image:url(${esc(avaUrl)})"></div>`;
+      else if (avaEmoji && /\p{Emoji}/u.test(avaEmoji)) avaHtml = `<div class="cs-result-ava" style="background:${color}">${avaEmoji}</div>`;
+      else avaHtml = `<div class="cs-result-ava" style="background:${color}">${(username[0] || '?').toUpperCase()}</div>`;
+
+      // Подсветка совпадения в тексте
+      const safeText = esc(m.text);
+      const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+      const highlighted = safeText.replace(re, '<mark>$1</mark>');
+
+      html += `<div class="cs-result" data-msg-id="${esc(m.id)}" data-index="${item.index}">
+        ${avaHtml}
+        <div class="cs-result-body">
+          <div class="cs-result-head">
+            <span class="cs-result-author" style="color:${color}">${esc(username)}</span>
+            <span class="cs-result-time">${formatTime(m.time)}</span>
+          </div>
+          <div class="cs-result-text">${highlighted}</div>
+        </div>
+      </div>`;
+    });
+    resultsEl.innerHTML = html;
+
+    resultsEl.querySelectorAll('.cs-result').forEach(el => {
+      el.onclick = () => {
+        const msgId = el.dataset.msgId;
+        // Закрываем панель поиска и скроллим к сообщению
+        closeSearch();
+        setTimeout(() => scrollToMessage(msgId), 100);
+      };
+    });
+  });
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeSearch();
+  });
+}
+
+/* Скролл к сообщению + подсветка */
+function scrollToMessage(msgId) {
+  const el = $('msgs')?.querySelector(`[data-id="${msgId}"]`);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el.classList.remove('flash');
+  // Перезапуск анимации
+  void el.offsetWidth;
+  el.classList.add('flash');
+  setTimeout(() => el.classList.remove('flash'), 1600);
+}
+
+/* ============================================================
    INIT ALL
    ============================================================ */
 function initAll() {
@@ -2418,6 +2534,7 @@ function initAll() {
   initEmailLoginModal();
   initComposer();
   initSearch();
+  initChatSearch();   // ← ДОБАВЬ
   initGroups();
   initInviteToast();
   initCalls();
