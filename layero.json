@@ -1,0 +1,12 @@
+{
+  "name": "danumes",
+  "main": "server.js",
+  "node": "22",
+  "build": "npm install",
+  "start": "node server.js",
+  "env": {
+    "SUPABASE_URL": "https://cmkaujwiicuvjkigdoms.supabase.co",
+    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNta2F1andpaWN1dmpraWdkb21zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTExMzA4NzgsImV4cCI6MjEwNjcwNjg3OH0.4pOQaEJKAGOWpqL713brExAG7FOXrODF2D6dbzOlQIw",
+    "PORT": "3000"
+  }
+}
