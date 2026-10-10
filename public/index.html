@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#1a1430" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<title>Danumes</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<link rel="manifest" href="/manifest.json" />
+<link rel="stylesheet" href="/style.css" />
+<script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+
+<!-- ============ АВТОРИЗАЦИЯ ============ -->
+<div id="auth">
+  <!-- ЭКРАН ВХОДА -->
+  <div class="auth-screen on" id="screenLogin">
+    <div class="auth-logo-top"><img src="/logo.svg" alt="Danumes" /></div>
+    <div class="auth-card">
+      <h1 class="auth-h1">Вход в Danumes</h1>
+      <p class="auth-p">Введите имя пользователя или почту,<br>которые указывали при регистрации.</p>
+
+      <form id="formLogin" autocomplete="off">
+        <div class="err" id="loginErr"></div>
+        <label class="auth-label">Имя или почта</label>
+        <input class="auth-input" id="loginLogin" placeholder="username или почта" maxlength="80" autocomplete="username" />
+        <label class="auth-label">Пароль</label>
+        <input class="auth-input" id="loginPassword" type="password" placeholder="Пароль" autocomplete="current-password" />
+        <button type="submit" class="auth-btn" id="loginBtn">Далее</button>
+        <button type="button" class="auth-link-btn" id="linkToRegister">Зарегистрироваться</button>
+        <button type="button" class="auth-link-btn muted" id="linkForgot">Забыл пароль</button>
+      </form>
+
+      <div class="auth-socials">
+        <button type="button" class="auth-social vk" id="btnVkLogin" title="ВКонтакте">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M13.162 18.994c.609 0 .858-.406.851-.915-.031-1.917.714-2.949 2.059-1.604 1.488 1.488 1.796 2.519 3.603 2.519h3.2c.808 0 1.126-.26 1.126-.668 0-.863-1.421-2.386-2.625-3.504-1.686-1.565-1.765-1.602-.313-3.486 1.801-2.339 4.157-5.336 2.073-5.336h-3.981c-.772 0-.828.435-1.103 1.083-.995 2.347-2.886 5.387-3.604 4.922-.751-.485-.407-2.406-.35-5.261.015-.754.011-1.271-1.141-1.539-.629-.145-1.241-.205-1.809-.205-2.273 0-3.841.953-2.95 1.119 1.571.293 1.42 3.692 1.054 5.16-.638 2.556-3.036-2.024-4.035-4.305-.241-.548-.315-.974-1.175-.974H.903c-.492 0-.787.16-.787.516 0 .602 2.96 6.72 5.786 9.77 2.756 2.975 5.48 2.708 7.26 2.708z"/></svg>
+        </button>
+        <button type="button" class="auth-social email" id="btnEmailLogin" title="Email">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><polyline points="2 8 12 14 22 8"/></svg>
+        </button>
+        <button type="button" class="auth-social google" id="btnGoogleLogin" title="Google">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ЭКРАН РЕГИСТРАЦИИ -->
+  <div class="auth-screen" id="screenRegister">
+    <div class="auth-logo-top"><img src="/logo.svg" alt="Danumes" /></div>
+    <div class="auth-card">
+      <h1 class="auth-h1">Создать<br>аккаунт</h1>
+      <p class="auth-p">Войти потом можно через «Войти»</p>
+
+      <form id="formRegister" autocomplete="off">
+        <div class="err" id="regErr"></div>
+        <label class="auth-label">Ваше имя</label>
+        <input class="auth-input" id="regUsername" placeholder="Как тебя зовут?" maxlength="20" autocomplete="username" />
+        <label class="auth-label">Пароль</label>
+        <input class="auth-input" id="regPassword" type="password" placeholder="Минимум 4 символа" autocomplete="new-password" />
+        <label class="auth-label">Почта</label>
+        <input class="auth-input" id="regEmail" type="email" placeholder="name@example.com" maxlength="100" autocomplete="email" />
+        <p class="auth-hint">Понадобится, если забудешь пароль</p>
+        <label class="auth-label">Телефон <span class="opt">· необязательно</span></label>
+        <input class="auth-input" id="regPhone" type="tel" placeholder="+7 900 000-00-00" maxlength="20" autocomplete="tel" />
+
+        <div class="auth-info-box">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <span>Имя для поиска — «@логин» — можно будет выбрать потом в настройках. Пока вас найдут по имени.</span>
+        </div>
+
+        <button type="submit" class="auth-btn" id="regBtn">Далее</button>
+        <button type="button" class="auth-link-btn" id="linkToLogin">Уже есть аккаунт? Войти</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- EMAIL ВХОД -->
+<div class="modal-bg" id="emailLoginModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Вход по Email</h3><button class="icon-btn" id="emlClose">✕</button></div>
+    <div class="modal-body left">
+      <div id="emlStep1">
+        <p class="modal-note">Введи email — пришлём 6-значный код.</p>
+        <div class="err" id="emlErr1"></div>
+        <input class="inp" id="emlEmailInput" type="email" placeholder="you@example.com" />
+        <button class="btn-grad" id="emlSendBtn" style="margin-top:14px;">Получить код</button>
+      </div>
+      <div id="emlStep2" style="display:none;">
+        <p class="modal-note">Код отправлен на <b id="emlSentTo" style="color:var(--accent);">—</b></p>
+        <div class="err" id="emlErr2"></div>
+        <input class="inp inp-code" id="emlCodeInput" type="text" inputmode="numeric" placeholder="000000" maxlength="6" />
+        <button class="btn-grad" id="emlVerifyBtn" style="margin-top:14px;">Войти</button>
+        <div style="display:flex; gap:10px; margin-top:12px;">
+          <button class="btn-ghost" id="emlResendBtn" style="flex:1;">Отправить ещё</button>
+          <button class="btn-ghost" id="emlChangeBtn" style="flex:1;">Другой email</button>
+        </div>
+        <div class="modal-note small center" style="margin-top:14px;"><span id="emlResendTimerText">Через 60 сек.</span></div>
+      </div>
+      <div id="emlStep3" style="display:none; text-align:center;">
+        <div class="big-emoji">✅</div>
+        <div class="modal-h">Готово</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VK ВХОД -->
+<div class="modal-bg" id="vkLoginModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Вход через VK</h3><button class="icon-btn" id="vklClose">✕</button></div>
+    <div class="modal-body left">
+      <div id="vklStep1">
+        <p class="modal-note">Отправь боту код:</p>
+        <div class="vk-code-box" id="vklCodeBox">——</div>
+        <div class="modal-note small center">Код действует 10 минут</div>
+        <div class="p-section" style="padding-top:20px">Что делать</div>
+        <ol class="vk-steps">
+          <li>Открой сообщество <b>Danumes</b></li>
+          <li>Напиши боту: <code id="vklCommandText">/login XXXXXX</code></li>
+          <li>Вернись — вход произойдёт автоматически</li>
+        </ol>
+        <div style="display:flex; gap:10px; margin-top:18px;">
+          <button class="btn-vk" id="vklOpenBotBtn" style="flex:1;">Открыть бота</button>
+          <button class="btn-ghost" id="vklCopyBtn" style="flex:1;">Копировать</button>
+        </div>
+        <button class="btn-ghost" id="vklRegenBtn" style="width:100%; margin-top:10px;">Новый код</button>
+      </div>
+      <div id="vklStep2" style="display:none; text-align:center;">
+        <div class="big-emoji">✅</div>
+        <div class="modal-h">Вход выполнен</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ПРИЛОЖЕНИЕ -->
+<div id="app">
+  <aside class="side" id="side">
+    <div class="side-head">
+      <div class="brand"><img src="/logo.svg" class="brand-logo" alt="" /><div class="brand-name">Danumes</div></div>
+      <button class="icon-btn" id="btnNewGroup" title="Создать группу">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>
+      </button>
+      <button class="icon-btn" id="btnNewChat" title="Найти человека">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+      <button class="icon-btn" id="btnSettings" title="Настройки">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+
+    <div class="mobile-head">
+      <div class="mobile-head-title">Danumes</div>
+      <button class="icon-btn" id="mobileSearchBtn">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+    </div>
+
+    <div class="stories-bar" id="storiesBar">
+      <div class="story-add" id="storyAdd">
+        <div class="story-ring story-ring-add"><div class="story-inner"><span class="story-plus">+</span></div></div>
+        <div class="story-name">Моя</div>
+      </div>
+      <div class="stories-list" id="storiesList"></div>
+    </div>
+
+    <div class="search-wrap">
+      <div class="search-box">
+        <span class="s-icon">🔍</span>
+        <input id="searchInput" type="text" placeholder="Поиск" />
+        <button class="s-clear" id="searchClear">✕</button>
+      </div>
+      <div class="tabs">
+        <button class="tab on" data-tab="all">Все</button>
+        <button class="tab" data-tab="unread">Непрочитанные</button>
+        <button class="tab" data-tab="groups">Группы</button>
+        <button class="tab" data-tab="channels">Каналы</button>
+      </div>
+    </div>
+
+    <div class="chat-list" id="chatList"></div>
+
+    <div class="my-bar" id="myBar">
+      <div class="ava sm" id="myBarAva" style="background:var(--grad)">?</div>
+      <div class="my-bar-info">
+        <div class="my-bar-name" id="myBarName">—</div>
+        <div class="my-bar-status" id="myBarStatus">в сети</div>
+      </div>
+      <button class="icon-btn" id="btnLogout" title="Выйти">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <main class="main" id="main">
+    <div class="empty" id="emptyState">
+      <img src="/logo.svg" class="empty-logo" alt="" />
+      <h2>Danumes</h2>
+      <p>Выбери чат слева или найди человека</p>
+    </div>
+
+    <div id="chatView" style="display:none; flex-direction:column; height:100%; min-height:0; overflow:hidden;">
+      <div class="main-head">
+        <button class="icon-btn back-btn" id="btnBack">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </button>
+        <div class="ava sm" id="mhAva" style="background:#a855f7">?</div>
+        <div class="mh-info">
+          <div class="mh-name" id="mhName">—</div>
+          <div class="mh-status" id="mhStatus">—</div>
+        </div>
+        <div class="call-actions">
+          <button class="icon-btn" id="btnVoiceCall" title="Аудиозвонок">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          </button>
+          <button class="icon-btn" id="btnVideoCall" title="Видеозвонок">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="3" ry="3"/></svg>
+          </button>
+        </div>
+        <button class="icon-btn" id="btnInfoChat" title="Информация">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </button>
+      </div>
+
+      <div id="pinnedBar">
+        <div class="pin-line"></div>
+        <div class="pin-body">
+          <div class="pin-label">Закреплено</div>
+          <div class="pin-text" id="pinnedBarText"></div>
+        </div>
+        <button class="icon-btn" id="pinnedUnpin" style="width:26px;height:26px;">✕</button>
+      </div>
+
+      <div class="msgs" id="msgs"></div>
+      <div class="typing-bar" id="typingBar"></div>
+      <div class="channel-notice" id="channelNotice">Только админы могут писать в этом канале</div>
+
+      <div class="composer-wrap">
+        <div class="reply-bar" id="replyBar">
+          <div class="reply-bar-content"><b id="replyName">—</b><span id="replyText">—</span></div>
+          <button class="icon-btn" id="replyClose" style="width:26px;height:26px;">✕</button>
+        </div>
+        <div class="attach-preview" id="attachPreview" style="display:none"></div>
+        <div class="composer" id="composer">
+          <button class="icon-btn" id="btnEmoji" title="Эмодзи">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+          </button>
+          <textarea id="input" rows="1" placeholder="Сообщение…"></textarea>
+          <button class="icon-btn" id="btnAttach" title="Прикрепить">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          </button>
+          <button class="icon-btn" id="btnVoice" title="Голосовое">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
+          </button>
+          <button class="send-fab" id="btnSend" disabled title="Отправить">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2" fill="currentColor"/></svg>
+          </button>
+        </div>
+        <div class="emoji-panel" id="emojiPanel">
+          <div class="emoji-tabs">
+            <button class="on" data-emoji-tab="emoji">😊</button>
+            <button data-emoji-tab="stickers">🐱</button>
+            <button data-emoji-tab="my-stickers">⭐</button>
+            <button data-emoji-tab="gifs">🎬</button>
+          </div>
+          <div class="emoji-body" id="emojiBody"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="dropOverlay"><div>Отпусти файл</div></div>
+  </main>
+
+  <nav class="mobile-nav" id="mobileNav">
+    <button class="mobile-nav-btn on" data-mnav="chats">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/></svg>
+      <span>Чаты</span>
+    </button>
+    <button class="mobile-nav-btn" data-mnav="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <span>Поиск</span>
+    </button>
+    <button class="mobile-nav-btn mobile-nav-plus" data-mnav="create">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+    <button class="mobile-nav-btn" data-mnav="newchat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>
+      <span>Люди</span>
+    </button>
+    <button class="mobile-nav-btn" data-mnav="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>Ещё</span>
+    </button>
+  </nav>
+</div>
+
+<!-- КОНТЕКСТНЫЕ МЕНЮ -->
+<div class="ctx-msg" id="ctxMsg">
+  <div class="ctx-emoji" id="ctxEmoji"></div>
+  <button class="ctx-item" data-action="reply"><span class="ico">↩</span><span>Ответить</span></button>
+  <button class="ctx-item" data-action="forward"><span class="ico">↪</span><span>Переслать</span></button>
+  <button class="ctx-item" data-action="copy"><span class="ico">📋</span><span>Копировать</span></button>
+  <button class="ctx-item" data-action="pin"><span class="ico">📌</span><span>Закрепить</span></button>
+  <button class="ctx-item" data-action="edit" data-own-only><span class="ico">✎</span><span>Изменить</span></button>
+  <button class="ctx-item danger" data-action="delete" data-own-only><span class="ico">🗑</span><span>Удалить</span></button>
+</div>
+<div class="ctx-msg" id="ctxChat" style="min-width:220px"></div>
+
+<!-- ПАНЕЛЬ НАСТРОЕК -->
+<aside class="panel" id="panel">
+  <div class="panel-head">
+    <button class="icon-btn" id="panelClose">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    </button>
+    <h2>Настройки</h2>
+  </div>
+  <div class="panel-body">
+    <div class="profile-hero">
+      <div class="ava xxl" id="profAva" style="background:var(--grad)">?</div>
+      <div class="profile-hero-name" id="profName">—</div>
+      <div class="profile-hero-handle" id="profHandle">@username</div>
+      <div class="profile-hero-actions">
+        <button class="btn-ghost" id="editProfileBtn">Профиль</button>
+        <button class="btn-ghost" id="copyUsernameBtn">Копировать @</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Аккаунт</div>
+      <div class="settings-card">
+        <div class="set-row" id="setBio"><div class="set-icon">📝</div><div class="set-body"><div class="set-title">О себе</div><div class="set-sub" id="setBioVal">Не указано</div></div><div class="set-chev">›</div></div>
+        <div class="set-row" id="setContacts"><div class="set-icon">👥</div><div class="set-body"><div class="set-title">Контакты</div><div class="set-sub" id="setContactsVal">0</div></div><div class="set-chev">›</div></div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Безопасность</div>
+      <div class="settings-card">
+        <div class="set-row" id="setPassword"><div class="set-icon red">🔐</div><div class="set-body"><div class="set-title">Сменить пароль</div></div><div class="set-chev">›</div></div>
+        <div class="set-row" id="setSessions"><div class="set-icon">🖥</div><div class="set-body"><div class="set-title">Активные сессии</div></div><div class="set-chev">›</div></div>
+        <div class="set-row" id="setDelete"><div class="set-icon red">⚠️</div><div class="set-body"><div class="set-title" style="color:var(--danger)">Удалить аккаунт</div></div><div class="set-chev">›</div></div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Способы входа</div>
+      <div class="settings-card">
+        <div class="set-row" id="setEmail"><div class="set-icon blue">✉️</div><div class="set-body"><div class="set-title">Email</div><div class="set-sub" id="setEmailVal">Не привязан</div></div><div class="set-badge" id="setEmailBadge">Привязать</div></div>
+        <div class="set-row" id="setPhone"><div class="set-icon blue">📱</div><div class="set-body"><div class="set-title">Телефон</div><div class="set-sub" id="setPhoneVal">Не привязан</div></div><div class="set-badge" id="setPhoneBadge">Привязать</div></div>
+        <div class="set-row" id="setVk"><div class="set-icon" style="background:rgba(59,130,246,0.15);color:#3b82f6;font-weight:800;">VK</div><div class="set-body"><div class="set-title">ВКонтакте</div><div class="set-sub" id="setVkVal">Не привязан</div></div><div class="set-badge" id="setVkBadge">Привязать</div></div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Внешний вид</div>
+      <div class="settings-card">
+        <div class="set-row" id="themeItem"><div class="set-icon">🌙</div><div class="set-body"><div class="set-title">Тёмная тема</div><div class="set-sub" id="themeSub">Включена</div></div><div class="switch on" id="themeSwitch"></div></div>
+        <div class="set-row" id="accentItem"><div class="set-icon">✨</div><div class="set-body"><div class="set-title">Акцент</div><div class="set-sub" id="accentSub">Фиолетовый</div></div><div class="set-chev">›</div></div>
+        <div class="set-row" id="wallpaperItem"><div class="set-icon">🖼</div><div class="set-body"><div class="set-title">Обои чата</div><div class="set-sub" id="wallpaperSub">По умолчанию</div></div><div class="set-chev">›</div></div>
+        <div class="set-row" id="minimalModeItem"><div class="set-icon">🧘</div><div class="set-body"><div class="set-title">Минимализм</div><div class="set-sub" id="minimalModeSub">Выкл</div></div><div class="switch" id="minimalModeSwitch"></div></div>
+        <div class="set-row" id="liveBgItem"><div class="set-icon">🌌</div><div class="set-body"><div class="set-title">Живой фон</div><div class="set-sub" id="liveBgSub">Выкл</div></div><div class="switch" id="liveBgSwitch"></div></div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Уведомления</div>
+      <div class="settings-card">
+        <div class="set-row" id="soundItem"><div class="set-icon green">🔊</div><div class="set-body"><div class="set-title">Звук</div><div class="set-sub" id="soundSub">Вкл</div></div><div class="switch on" id="soundSwitch"></div></div>
+        <div class="set-row" id="notifyItem"><div class="set-icon green">🔔</div><div class="set-body"><div class="set-title">Уведомления</div></div><div class="switch on" id="notifySwitch"></div></div>
+        <div class="set-row" id="vibrationItem"><div class="set-icon">📳</div><div class="set-body"><div class="set-title">Вибрация</div><div class="set-sub" id="vibrationSub">Вкл</div></div><div class="switch on" id="vibrationSwitch"></div></div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">О приложении</div>
+      <div class="settings-card">
+        <div class="set-row" style="cursor:default"><div class="set-icon">✦</div><div class="set-body"><div class="set-title">Danumes</div><div class="set-sub">Версия 25</div></div></div>
+        <div class="set-row" id="adminOpenRow" style="display:none"><div class="set-icon" style="background:rgba(139,92,246,0.18);color:#a855f7">🛡</div><div class="set-body"><div class="set-title">Админ-панель</div></div><div class="set-chev">›</div></div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ЗВОНКИ -->
+<div id="callOverlay">
+  <div class="call-header">
+    <div class="ava sm" id="callHeaderAva" style="background:#a855f7">?</div>
+    <div class="call-header-info">
+      <div class="call-header-name" id="callHeaderName">Звонок</div>
+      <div class="call-header-status" id="callHeaderStatus">Соединение…</div>
+    </div>
+    <div class="call-header-timer" id="callHeaderTimer">00:00</div>
+  </div>
+  <div class="call-videos grid-1" id="callVideos"></div>
+  <div class="call-controls">
+    <button class="call-btn" id="callMic">🎤</button>
+    <button class="call-btn" id="callCam">📹</button>
+    <button class="call-btn" id="callScreen">🖥</button>
+    <button class="call-btn" id="callMinimize">⤡</button>
+    <button class="call-btn end" id="callEnd">📞</button>
+  </div>
+</div>
+
+<div id="incomingCall">
+  <div class="ava sm" id="incAva" style="background:#a855f7">?</div>
+  <div class="incoming-info">
+    <div class="incoming-name" id="incName">—</div>
+    <div class="incoming-type" id="incType">Входящий звонок</div>
+  </div>
+  <div class="incoming-actions">
+    <button class="incoming-btn reject" id="incReject">✕</button>
+    <button class="incoming-btn accept" id="incAccept">✓</button>
+  </div>
+</div>
+
+<div id="miniCall">
+  <video class="mini-video" id="miniVideo" autoplay playsinline muted></video>
+  <div class="mini-footer">
+    <div class="mini-info"><div class="mini-name" id="miniName">Звонок</div><div class="mini-time" id="miniTime">00:00</div></div>
+    <button class="mini-btn" id="miniExpand">⤢</button>
+    <button class="mini-btn end" id="miniEnd">✕</button>
+  </div>
+</div>
+
+<!-- МОДАЛКИ (остальные) -->
+<div class="modal-bg" id="newChatModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Найти человека</h3><button class="icon-btn" id="ncClose">✕</button></div>
+    <div class="modal-body left">
+      <input class="inp" id="ncSearchInput" placeholder="Введи имя..." />
+      <div class="search-results" id="ncResults" style="margin-top:14px; padding:20px; text-align:center; color:var(--text-3); font-size:13px;">Введи имя</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="editProfileModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Профиль</h3><button class="icon-btn" id="epClose">✕</button></div>
+    <div class="modal-body left">
+      <div class="pe-section" style="text-align:center"><div class="ava xxl" id="epAva" style="background:var(--bg-hover); margin:0 auto 14px;">?</div></div>
+      <div class="pe-section">
+        <h4>Аватар</h4>
+        <div style="display:flex; gap:10px; margin-bottom:14px;">
+          <button class="btn-ghost" id="epUploadAvatar" style="flex:1;">Загрузить фото</button>
+          <button class="btn-ghost" id="epClearAvatar">Сбросить</button>
+        </div>
+        <div class="small-label">Цвет фона</div>
+        <div class="color-row" id="epColorRow"></div>
+        <div class="small-label" style="margin-top:16px;">Эмодзи-аватар</div>
+        <div class="emoji-row" id="epEmojiRow"></div>
+      </div>
+      <div class="pe-section"><h4>О себе</h4><textarea class="inp" id="epBio" maxlength="200" rows="3"></textarea></div>
+      <button class="btn-grad" id="epSave">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="passwordModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Смена пароля</h3><button class="icon-btn" id="pwClose">✕</button></div>
+    <div class="modal-body left">
+      <div class="err" id="pwErr"></div>
+      <div class="p-section">Текущий</div>
+      <input class="inp" id="pwCurrent" type="password" />
+      <div class="p-section">Новый</div>
+      <input class="inp" id="pwNext" type="password" />
+      <button class="btn-grad" id="pwSave">Сменить</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="sessionsModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Активные сессии</h3><button class="icon-btn" id="ssClose">✕</button></div>
+    <div class="modal-body left" id="ssBody"></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="deleteModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Удалить аккаунт</h3><button class="icon-btn" id="dlClose">✕</button></div>
+    <div class="modal-body left">
+      <div class="err" id="dlErr"></div>
+      <p style="color:var(--text-2); margin-bottom:14px;">Это <b style="color:var(--danger)">необратимо</b>.</p>
+      <input class="inp" id="dlPassword" type="password" placeholder="Пароль" />
+      <button class="btn-danger" id="dlConfirm" style="width:100%; margin-top:10px;">Удалить навсегда</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="emailModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Привязать Email</h3><button class="icon-btn" id="emClose">✕</button></div>
+    <div class="modal-body left">
+      <input class="inp" id="emInput" type="email" placeholder="you@example.com" />
+      <button class="btn-grad" id="emSave" style="margin-top:12px;">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="phoneModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Привязать телефон</h3><button class="icon-btn" id="phClose">✕</button></div>
+    <div class="modal-body left">
+      <input class="inp" id="phInput" type="tel" placeholder="+7 900 000-00-00" />
+      <button class="btn-grad" id="phSave" style="margin-top:12px;">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="vkLinkModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Привязка VK</h3><button class="icon-btn" id="vkClose">✕</button></div>
+    <div class="modal-body left">
+      <div id="vkStep1">
+        <p class="modal-note">Отправь боту код:</p>
+        <div class="vk-code-box" id="vkCodeBox">——</div>
+        <ol class="vk-steps">
+          <li>Открой сообщество <b>Danumes</b></li>
+          <li>Напиши: <code id="vkCommandText">/link XXXXXX</code></li>
+          <li>Вернись сюда</li>
+        </ol>
+        <button class="btn-grad" id="vkOpenBotBtn" style="width:100%; margin-top:16px;">Открыть бота</button>
+        <button class="btn-ghost" id="vkRegenBtn" style="width:100%; margin-top:10px;">Новый код</button>
+      </div>
+      <div id="vkStep2" style="display:none; text-align:center;">
+        <div class="big-emoji">✅</div>
+        <div class="modal-h">Готово</div>
+        <button class="btn-ghost" id="vkUnlinkBtn" style="width:100%; margin-top:16px; color:var(--danger);">Отвязать</button>
+        <button class="btn-grad" id="vkDoneBtn" style="width:100%; margin-top:10px;">Ок</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="contactsModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Контакты</h3><button class="icon-btn" id="cntClose">✕</button></div>
+    <div class="modal-body left">
+      <div style="display:flex; gap:8px;">
+        <input class="inp" id="cntUsername" placeholder="username" style="flex:1;" />
+        <button class="btn-grad" id="cntAdd" style="width:auto; padding:12px 20px; margin:0;">+</button>
+      </div>
+      <div class="p-section" style="padding-top:18px">Мои контакты</div>
+      <div id="cntList"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="stickersModal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-head"><h3>Мои стикеры</h3><button class="icon-btn" id="smClose">✕</button></div>
+    <div class="modal-body left">
+      <button class="btn-grad" id="smCreatePack" style="margin-bottom:16px;">+ Создать пак</button>
+      <div id="smPacksList"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="createPackModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Новый пак</h3><button class="icon-btn" id="cpClose">✕</button></div>
+    <div class="modal-body left">
+      <div class="p-section">Название</div>
+      <input class="inp" id="cpName" maxlength="40" />
+      <div class="p-section">Описание</div>
+      <textarea class="inp" id="cpDesc" rows="2" maxlength="200"></textarea>
+      <label style="display:flex; align-items:center; gap:10px; margin-top:16px; font-size:14px;">
+        <input type="checkbox" id="cpPublic" checked /> Публичный
+      </label>
+      <button class="btn-grad" id="cpSave" style="margin-top:16px;">Создать</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="packEditorModal">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-head"><h3 id="pePackTitle">Пак</h3><button class="icon-btn" id="peClose">✕</button></div>
+    <div class="modal-body left">
+      <button class="btn-grad" id="peAddSticker" style="margin-bottom:16px;">Добавить стикер</button>
+      <div id="peStickersGrid" class="pack-stickers-grid"></div>
+      <button class="btn-danger" id="peDeletePack" style="width:100%; margin-top:20px;">Удалить пак</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="newGroupModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Создать</h3><button class="icon-btn" id="ngClose">✕</button></div>
+    <div class="modal-body left">
+      <div class="pe-section">
+        <h4>Тип</h4>
+        <div class="group-type-pick">
+          <div class="type-card on" id="ngTypeGroup"><div class="type-icon">👥</div><div class="type-name">Группа</div></div>
+          <div class="type-card" id="ngTypeChannel"><div class="type-icon">📢</div><div class="type-name">Канал</div></div>
+        </div>
+      </div>
+      <div class="pe-section"><h4>Название</h4><input class="inp" id="ngName" maxlength="60" /></div>
+      <div class="pe-section"><h4>Описание</h4><textarea class="inp" id="ngDesc" maxlength="200" rows="2"></textarea></div>
+      <div class="pe-section"><h4>Участники <span id="ngCount" style="color:var(--accent);">0</span></h4><div class="member-pick" id="ngMembers"></div></div>
+      <button class="btn-grad" id="ngCreate">Создать</button>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+<div id="imgViewer"><img id="imgViewerImg" src="" /></div>
+
+<script src="/app.js"></script>
+</body>
+</html>
