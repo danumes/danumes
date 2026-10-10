@@ -213,6 +213,9 @@
           <div class="mh-name" id="mhName">—</div>
           <div class="mh-status" id="mhStatus">—</div>
         </div>
+        <button class="icon-btn" id="btnSearchInChat" title="Поиск в чате">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
         <div class="call-actions">
           <button class="icon-btn" id="btnVoiceCall" title="Аудиозвонок">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
@@ -224,6 +227,17 @@
         <button class="icon-btn" id="btnInfoChat" title="Информация">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
         </button>
+      </div>
+
+      <!-- Панель поиска по сообщениям -->
+      <div id="chatSearchBar" style="display:none;">
+        <div class="chat-search-input-wrap">
+          <span class="cs-icon">🔍</span>
+          <input id="chatSearchInput" type="text" placeholder="Поиск по сообщениям…" autocomplete="off" />
+          <span id="chatSearchCount" class="cs-count">0</span>
+          <button class="icon-btn cs-close" id="chatSearchClose">✕</button>
+        </div>
+        <div id="chatSearchResults" class="chat-search-results"></div>
       </div>
 
       <div id="pinnedBar">
