@@ -934,6 +934,68 @@ app.post('/api/groups/create', requireAuth, async (req, res) => {
   } catch (e) { console.error('api/groups/create:', e); res.status(500).json({ ok: false, error: 'server-error' }); }
 });
 
+app.get('/api/users/:username', requireAuth, async (req, res) => {
+  try {
+    const me = req.user;
+    const targetKey = String(req.params.username || '').trim().toLowerCase();
+    if (!targetKey) return res.status(400).json({ ok: false, error: 'no-username' });
+
+    const row = await dbGet('SELECT * FROM accounts WHERE username=?', [targetKey]);
+    if (!row) return res.status(404).json({ ok: false, error: 'user-not-found' });
+
+    const online = isOnline(targetKey);
+
+    // Берём last_seen из таблицы
+    let lastSeen = null;
+    try {
+      const ls = await dbGet('SELECT time FROM last_seen WHERE username=?', [targetKey]);
+      if (ls) lastSeen = ls.time;
+    } catch (e) {}
+
+    // Приватность: если last_seen = 'nobody' — не отдаём время
+    let showLastSeen = true;
+    try {
+      const p = await dbGet('SELECT last_seen FROM privacy WHERE username=?', [targetKey]);
+      if (p && p.last_seen === 'nobody') showLastSeen = false;
+    } catch (e) {}
+
+    // Сколько у нас общих личных чатов
+    const myMessages = await dbAll(
+      "SELECT DISTINCT chat_id FROM messages WHERE chat_id NOT LIKE 'g_%'"
+    );
+    let commonChats = 0;
+    for (const r of myMessages) {
+      const cid = r.chat_id;
+      if (!cid || !cid.includes('::')) continue;
+      const [a, b] = cid.split('::');
+      const hasMe = a === me.username || b === me.username;
+      const hasTarget = a === targetKey || b === targetKey;
+      if (hasMe && hasTarget) commonChats++;
+    }
+
+    // Общие группы
+    const myGroups = await dbAll('SELECT group_id FROM group_members WHERE username=?', [me.username]);
+    const targetGroups = await dbAll('SELECT group_id FROM group_members WHERE username=?', [targetKey]);
+    const mySet = new Set(myGroups.map(r => r.group_id));
+    const commonGroups = targetGroups.filter(r => mySet.has(r.group_id)).length;
+
+    const base = publicUser(accFromDb(row, online), !!me.is_admin);
+    res.json({
+      ok: true,
+      user: {
+        ...base,
+        lastSeen: showLastSeen ? lastSeen : null,
+        isMe: targetKey === me.username,
+        commonChats,
+        commonGroups
+      }
+    });
+  } catch (e) {
+    console.error('api/users/:username:', e);
+    res.status(500).json({ ok: false, error: 'server-error' });
+  }
+});
+
 /* ============================================================
    ЗАПУСК — БЕЗ VK/EMAIL/GOOGLE
    ============================================================ */
