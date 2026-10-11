@@ -11,46 +11,6 @@ const fs = require('fs');
 const multer = require('multer');
 const { uploadToTelegram, getTelegramFileUrl, makeFileIdUrl } = require('./telegram-storage');
 
-// multer теперь хранит файл в памяти, не на диске
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 25 * 1024 * 1024 }
-});
-
-// Новый /upload — отправляет файл в Telegram
-app.post('/upload', (req, res) => {
-  upload.single('file')(req, res, async err => {
-    if (err) return res.status(400).json({ ok: false, error: err.message });
-    if (!req.file) return res.status(400).json({ ok: false, error: 'no-file' });
-
-    const result = await uploadToTelegram(
-      req.file.buffer,
-      req.file.originalname || 'file',
-      req.file.mimetype
-    );
-
-    if (!result.ok) return res.status(500).json({ ok: false, error: result.error });
-
-    // Возвращаем внутренний URL — он будет отдавать файл через наш сервер
-    res.json({
-      ok: true,
-      url: makeFileIdUrl(result.fileId),
-      fileId: result.fileId,
-      name: req.file.originalname,
-      size: req.file.size,
-      mime: req.file.mimetype
-    });
-  });
-});
-
-// Отдача файла через Telegram
-app.get('/tg-file/:fileId', async (req, res) => {
-  const fileId = req.params.fileId;
-  const url = await getTelegramFileUrl(fileId);
-  if (!url) return res.status(404).send('not found');
-  res.redirect(url);
-});
-
 const { createClient } = require('@libsql/client');
 
 /* ---------- .ENV ---------- */
@@ -158,25 +118,43 @@ const io = new Server(server, { maxHttpBufferSize: 25e6 });
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-const UPLOAD_DIR = path.join(__dirname, 'public', 'uploads');
-try { if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true }); }
-catch (e) { console.log('⚠️  uploads не создан:', e.message); }
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname || '').slice(0, 8);
-    cb(null, 'f_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex') + ext);
-  }
+// multer теперь хранит файл в памяти
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 }
 });
-const upload = multer({ storage, limits: { fileSize: 25 * 1024 * 1024 } });
 
+// Новый /upload — отправляет файл в Telegram
 app.post('/upload', (req, res) => {
-  upload.single('file')(req, res, err => {
+  upload.single('file')(req, res, async err => {
     if (err) return res.status(400).json({ ok: false, error: err.message });
     if (!req.file) return res.status(400).json({ ok: false, error: 'no-file' });
-    res.json({ ok: true, url: '/uploads/' + req.file.filename, name: req.file.originalname, size: req.file.size, mime: req.file.mimetype });
+
+    const result = await uploadToTelegram(
+      req.file.buffer,
+      req.file.originalname || 'file',
+      req.file.mimetype
+    );
+
+    if (!result.ok) return res.status(500).json({ ok: false, error: result.error });
+
+    res.json({
+      ok: true,
+      url: makeFileIdUrl(result.fileId),
+      fileId: result.fileId,
+      name: req.file.originalname,
+      size: req.file.size,
+      mime: req.file.mimetype
+    });
   });
+});
+
+// Отдача файла через Telegram
+app.get('/tg-file/:fileId', async (req, res) => {
+  const fileId = req.params.fileId;
+  const url = await getTelegramFileUrl(fileId);
+  if (!url) return res.status(404).send('not found');
+  res.redirect(url);
 });
 
 /* ---------- PREVIEW ---------- */
