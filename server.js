@@ -9,7 +9,7 @@ const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
-const { uploadToTelegram, getTelegramFileUrl, makeFileIdUrl } = require('./telegram-storage');
+const { uploadToPostgres, readFromPostgres, makeFileIdUrl } = require('./pg-storage');
 
 const { createClient } = require('@libsql/client');
 
@@ -125,12 +125,13 @@ const upload = multer({
 });
 
 // Новый /upload — отправляет файл в Telegram
+// /upload — сохраняет файл в PostgreSQL
 app.post('/upload', (req, res) => {
   upload.single('file')(req, res, async err => {
     if (err) return res.status(400).json({ ok: false, error: err.message });
     if (!req.file) return res.status(400).json({ ok: false, error: 'no-file' });
 
-    const result = await uploadToTelegram(
+    const result = await uploadToPostgres(
       req.file.buffer,
       req.file.originalname || 'file',
       req.file.mimetype
@@ -149,12 +150,20 @@ app.post('/upload', (req, res) => {
   });
 });
 
-// Отдача файла через Telegram
-app.get('/tg-file/:fileId', async (req, res) => {
-  const fileId = req.params.fileId;
-  const url = await getTelegramFileUrl(fileId);
-  if (!url) return res.status(404).send('not found');
-  res.redirect(url);
+// /pg-file/:oid — отдаёт файл из PostgreSQL
+app.get('/pg-file/:oid', async (req, res) => {
+  try {
+    const oid = parseInt(req.params.oid, 10);
+    if (!oid || isNaN(oid)) return res.status(400).send('bad oid');
+    const buffer = await readFromPostgres(oid);
+    if (!buffer || buffer.length === 0) return res.status(404).send('not found');
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Cache-Control', 'public, max-age=31536000');
+    res.send(buffer);
+  } catch (e) {
+    console.error('pg-file error:', e.message);
+    res.status(500).send('error');
+  }
 });
 
 /* ---------- PREVIEW ---------- */
