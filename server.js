@@ -50,7 +50,6 @@ app.get('/tg-file/:fileId', async (req, res) => {
   if (!url) return res.status(404).send('not found');
   res.redirect(url);
 });
-);
 
 const { createClient } = require('@libsql/client');
 
