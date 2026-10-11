@@ -151,15 +151,20 @@ app.post('/upload', (req, res) => {
 });
 
 // /pg-file/:oid — отдаёт файл из PostgreSQL
-app.get('/pg-file/:oid', async (req, res) => {
+// /pg-file/:fileId — отдаёт файл из PostgreSQL
+app.get('/pg-file/:fileId', async (req, res) => {
   try {
-    const oid = parseInt(req.params.oid, 10);
-    if (!oid || isNaN(oid)) return res.status(400).send('bad oid');
-    const buffer = await readFromPostgres(oid);
-    if (!buffer || buffer.length === 0) return res.status(404).send('not found');
-    res.setHeader('Content-Type', 'application/octet-stream');
+    const fileId = req.params.fileId;
+    if (!fileId) return res.status(400).send('bad id');
+
+    const result = await readFromPostgres(fileId);
+    if (!result || !result.buffer || result.buffer.length === 0) {
+      return res.status(404).send('not found');
+    }
+
+    res.setHeader('Content-Type', result.mime || 'application/octet-stream');
     res.setHeader('Cache-Control', 'public, max-age=31536000');
-    res.send(buffer);
+    res.send(result.buffer);
   } catch (e) {
     console.error('pg-file error:', e.message);
     res.status(500).send('error');
