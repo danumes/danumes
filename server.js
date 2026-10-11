@@ -682,7 +682,7 @@ if (!clean && (!attachments || attachments.length === 0) && !sticker && !sticker
     }
   });
 
-  connect', async () => {
+  socket.on('disconnect', async () => {
     const me = users.get(socket.id);
     if (me) {
       const key = me.usernameLower;
