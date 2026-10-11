@@ -447,21 +447,21 @@ io.on('connection', socket => {
     socket.emit('chat:opened', result);
   });
 
-socket.on('message:send', async ({ chatId, text, attachments }, cb) => {
+socket.on('message:send', async ({ chatId, text, attachments, sticker, stickerUrl }, cb) => {
     let me = users.get(socket.id);
     if (!me) { const tok = socket.handshake?.auth?.token; if (tok) { const row = await tryAuthByToken(socket, tok); if (row) me = users.get(socket.id); } }
     if (!me) return cb && cb({ ok: false, error: 'not-auth' });
     if (!(await canAccessChat(chatId, me.usernameLower))) return cb && cb({ ok: false, error: 'no-access' });
     let clean = String(text || '').trim().slice(0, 4000);
-if (!clean && (!attachments || attachments.length === 0)) {
+if (!clean && (!attachments || attachments.length === 0) && !sticker && !stickerUrl) {
   return cb && cb({ ok: false, error: 'empty' });
 }
     const hadBad = hasBadWords(clean);
     if (hadBad) clean = filterBadWords(clean);
     const id = uid('m');
     const time = Date.now();
-    await dbRun(`INSERT INTO messages (id, chat_id, type, user_id, username, color, avatar, avatar_url, text, time, attachments, reactions, reply_to, edited, deleted, deleted_for, censored) VALUES (?, ?, 'user', ?, ?, ?, ?, ?, ?, ?, ?, '{}', NULL, 0, 0, '[]', ?)`,
-  [id, chatId, me.usernameLower, me.username, me.color, me.avatar, me.avatarUrl, clean, time, attachments ? JSON.stringify(attachments) : null, hadBad ? 1 : 0]);
+        await dbRun(`INSERT INTO messages (id, chat_id, type, user_id, username, color, avatar, avatar_url, text, time, attachments, sticker, sticker_url, reactions, reply_to, edited, deleted, deleted_for, censored) VALUES (?, ?, 'user', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', NULL, 0, 0, '[]', ?)`,
+  [id, chatId, me.usernameLower, me.username, me.color, me.avatar, me.avatarUrl, clean, time, attachments ? JSON.stringify(attachments) : null, sticker || null, stickerUrl || null, hadBad ? 1 : 0]);
     const saved = await dbGet('SELECT * FROM messages WHERE id=?', [id]);
     await emitToChat(chatId, 'message', msgFromDb(saved));
     if (cb) cb({ ok: true, msg: msgFromDb(saved) });
@@ -524,6 +524,95 @@ if (!clean && (!attachments || attachments.length === 0)) {
     await emitToChat(chatId, 'message:updated', msgFromDb(updated));
   });
 
+  /* ---------- СТИКЕР-ПАКИ ---------- */
+
+  socket.on('stickers:list-my', async (cb) => {
+    const me = users.get(socket.id); if (!me) return cb && cb([]);
+    const packs = await dbAll('SELECT * FROM sticker_packs WHERE owner=? ORDER BY created_at DESC', [me.usernameLower]);
+    const result = [];
+    for (const p of packs) {
+      const stickers = await dbAll('SELECT * FROM stickers WHERE pack_id=? ORDER BY position ASC, created_at ASC', [p.id]);
+      result.push({
+        id: p.id,
+        name: p.name,
+        description: p.description || '',
+        coverUrl: p.cover_url || null,
+        isPublic: !!p.is_public,
+        stickers: stickers.map(s => ({ id: s.id, url: s.url, emoji: s.emoji || '🎨' }))
+      });
+    }
+    if (cb) cb(result);
+  });
+
+  socket.on('stickers:list-public', async ({ }, cb) => {
+    const packs = await dbAll('SELECT * FROM sticker_packs WHERE is_public=1 ORDER BY created_at DESC LIMIT 30');
+    const result = [];
+    for (const p of packs) {
+      const stickers = await dbAll('SELECT * FROM stickers WHERE pack_id=? ORDER BY position ASC, created_at ASC', [p.id]);
+      result.push({
+        id: p.id,
+        name: p.name,
+        description: p.description || '',
+        coverUrl: p.cover_url || null,
+        isPublic: true,
+        stickers: stickers.map(s => ({ id: s.id, url: s.url, emoji: s.emoji || '🎨' }))
+      });
+    }
+    if (cb) cb(result);
+  });
+
+  socket.on('stickers:create-pack', async ({ name, description, isPublic }, cb) => {
+    const me = users.get(socket.id);
+    if (!me) return cb && cb({ ok: false, error: 'not-auth' });
+    const n = String(name || '').trim().slice(0, 40);
+    if (!n) return cb && cb({ ok: false, error: 'empty-name' });
+    const id = uid('sp');
+    await dbRun(
+      'INSERT INTO sticker_packs (id, owner, name, description, cover_url, created_at, is_public) VALUES (?, ?, ?, ?, NULL, ?, ?)',
+      [id, me.usernameLower, n, String(description || '').slice(0, 200), Date.now(), isPublic ? 1 : 0]
+    );
+    if (cb) cb({ ok: true, id });
+  });
+
+  socket.on('stickers:add', async ({ packId, url, emoji }, cb) => {
+    const me = users.get(socket.id);
+    if (!me) return cb && cb({ ok: false, error: 'not-auth' });
+    const pack = await dbGet('SELECT * FROM sticker_packs WHERE id=?', [packId]);
+    if (!pack || pack.owner !== me.usernameLower) return cb && cb({ ok: false, error: 'no-access' });
+    if (!url && !emoji) return cb && cb({ ok: false, error: 'empty' });
+    const id = uid('st');
+    const pos = (await dbAll('SELECT COUNT(*) as cnt FROM stickers WHERE pack_id=?', [packId]))[0]?.cnt || 0;
+    await dbRun(
+      'INSERT INTO stickers (id, pack_id, url, emoji, position, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, packId, String(url || ''), String(emoji || '🎨').slice(0, 8), pos, Date.now()]
+    );
+    if (!pack.cover_url && url) {
+      await dbRun('UPDATE sticker_packs SET cover_url=? WHERE id=?', [url, packId]);
+    }
+    if (cb) cb({ ok: true, id });
+  });
+
+  socket.on('stickers:delete', async ({ stickerId }, cb) => {
+    const me = users.get(socket.id);
+    if (!me) return cb && cb({ ok: false });
+    const st = await dbGet('SELECT * FROM stickers WHERE id=?', [stickerId]);
+    if (!st) return cb && cb({ ok: false });
+    const pack = await dbGet('SELECT * FROM sticker_packs WHERE id=?', [st.pack_id]);
+    if (!pack || pack.owner !== me.usernameLower) return cb && cb({ ok: false, error: 'no-access' });
+    await dbRun('DELETE FROM stickers WHERE id=?', [stickerId]);
+    if (cb) cb({ ok: true });
+  });
+
+  socket.on('stickers:delete-pack', async ({ packId }, cb) => {
+    const me = users.get(socket.id);
+    if (!me) return cb && cb({ ok: false });
+    const pack = await dbGet('SELECT * FROM sticker_packs WHERE id=?', [packId]);
+    if (!pack || pack.owner !== me.usernameLower) return cb && cb({ ok: false, error: 'no-access' });
+    await dbRun('DELETE FROM stickers WHERE pack_id=?', [packId]);
+    await dbRun('DELETE FROM sticker_packs WHERE id=?', [packId]);
+    if (cb) cb({ ok: true });
+  });
+   
   socket.on('poll:vote', async ({ chatId, messageId, optionIndex }) => {
     const me = users.get(socket.id); if (!me) return;
     const row = await dbGet('SELECT * FROM messages WHERE id=?', [messageId]);
@@ -593,7 +682,7 @@ if (!clean && (!attachments || attachments.length === 0)) {
     }
   });
 
-  socket.on('disconnect', async () => {
+  connect', async () => {
     const me = users.get(socket.id);
     if (me) {
       const key = me.usernameLower;
