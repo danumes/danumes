@@ -9,7 +9,7 @@ const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
-const { uploadToPostgres, readFromPostgres, makeFileIdUrl } = require('./pg-storage');
+const { uploadToSupabase } = require('./supabase-storage');
 
 const { createClient } = require('@libsql/client');
 
@@ -131,7 +131,7 @@ app.post('/upload', (req, res) => {
     if (err) return res.status(400).json({ ok: false, error: err.message });
     if (!req.file) return res.status(400).json({ ok: false, error: 'no-file' });
 
-    const result = await uploadToPostgres(
+    const result = await uploadToSupabase(
       req.file.buffer,
       req.file.originalname || 'file',
       req.file.mimetype
@@ -141,7 +141,7 @@ app.post('/upload', (req, res) => {
 
     res.json({
       ok: true,
-      url: makeFileIdUrl(result.fileId),
+      url: result.url,
       fileId: result.fileId,
       name: req.file.originalname,
       size: req.file.size,
@@ -152,24 +152,6 @@ app.post('/upload', (req, res) => {
 
 // /pg-file/:oid — отдаёт файл из PostgreSQL
 // /pg-file/:fileId — отдаёт файл из PostgreSQL
-app.get('/pg-file/:fileId', async (req, res) => {
-  try {
-    const fileId = req.params.fileId;
-    if (!fileId) return res.status(400).send('bad id');
-
-    const result = await readFromPostgres(fileId);
-    if (!result || !result.buffer || result.buffer.length === 0) {
-      return res.status(404).send('not found');
-    }
-
-    res.setHeader('Content-Type', result.mime || 'application/octet-stream');
-    res.setHeader('Cache-Control', 'public, max-age=31536000');
-    res.send(result.buffer);
-  } catch (e) {
-    console.error('pg-file error:', e.message);
-    res.status(500).send('error');
-  }
-});
 
 /* ---------- PREVIEW ---------- */
 const previewCache = new Map();
@@ -476,8 +458,8 @@ socket.on('message:send', async ({ chatId, text, attachments }, cb) => {
     if (hadBad) clean = filterBadWords(clean);
     const id = uid('m');
     const time = Date.now();
-    await dbRun(`INSERT INTO messages (id, chat_id, type, user_id, username, color, avatar, avatar_url, text, time, reactions, reply_to, edited, deleted, deleted_for, censored) VALUES (?, ?, 'user', ?, ?, ?, ?, ?, ?, ?, '{}', NULL, 0, 0, '[]', ?)`,
-      [id, chatId, me.usernameLower, me.username, me.color, me.avatar, me.avatarUrl, clean, time, attachments ? JSON.stringify(attachments) : null, hadBad ? 1 : 0]);
+    await dbRun(`INSERT INTO messages (id, chat_id, type, user_id, username, color, avatar, avatar_url, text, time, attachments, reactions, reply_to, edited, deleted, deleted_for, censored) VALUES (?, ?, 'user', ?, ?, ?, ?, ?, ?, ?, ?, '{}', NULL, 0, 0, '[]', ?)`,
+  [id, chatId, me.usernameLower, me.username, me.color, me.avatar, me.avatarUrl, clean, time, attachments ? JSON.stringify(attachments) : null, hadBad ? 1 : 0]);
     const saved = await dbGet('SELECT * FROM messages WHERE id=?', [id]);
     await emitToChat(chatId, 'message', msgFromDb(saved));
     if (cb) cb({ ok: true, msg: msgFromDb(saved) });
