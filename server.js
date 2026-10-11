@@ -9,6 +9,49 @@ const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
+const { uploadToTelegram, getTelegramFileUrl, makeFileIdUrl } = require('./telegram-storage');
+
+// multer теперь хранит файл в памяти, не на диске
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 }
+});
+
+// Новый /upload — отправляет файл в Telegram
+app.post('/upload', (req, res) => {
+  upload.single('file')(req, res, async err => {
+    if (err) return res.status(400).json({ ok: false, error: err.message });
+    if (!req.file) return res.status(400).json({ ok: false, error: 'no-file' });
+
+    const result = await uploadToTelegram(
+      req.file.buffer,
+      req.file.originalname || 'file',
+      req.file.mimetype
+    );
+
+    if (!result.ok) return res.status(500).json({ ok: false, error: result.error });
+
+    // Возвращаем внутренний URL — он будет отдавать файл через наш сервер
+    res.json({
+      ok: true,
+      url: makeFileIdUrl(result.fileId),
+      fileId: result.fileId,
+      name: req.file.originalname,
+      size: req.file.size,
+      mime: req.file.mimetype
+    });
+  });
+});
+
+// Отдача файла через Telegram
+app.get('/tg-file/:fileId', async (req, res) => {
+  const fileId = req.params.fileId;
+  const url = await getTelegramFileUrl(fileId);
+  if (!url) return res.status(404).send('not found');
+  res.redirect(url);
+});
+);
+
 const { createClient } = require('@libsql/client');
 
 /* ---------- .ENV ---------- */
