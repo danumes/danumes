@@ -1,138 +1,91 @@
 /* ============================================================
-   DANUMES · pg-storage.js v2
-   Хранит файлы в PostgreSQL через Large Objects.
-   Исправлены баги: fd вместо 0, bytea → Buffer, чанки.
+   DANUMES · pg-storage.js v3
+   Хранит файлы в PostgreSQL через bytea-колонку.
+   Проще, надёжнее, работает без транзакций и LO.
    ============================================================ */
 
-const { Client } = require('pg');
+const { Pool } = require('pg');
 
-const db = new Client({
+const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  ssl: { rejectUnauthorized: false },
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000
 });
 
-let connected = false;
-let connecting = null;
+pool.on('error', (e) => console.error('❌ pg pool error:', e.message));
 
-async function ensureConnect() {
-  if (connected) return;
-  if (connecting) return connecting;
-  connecting = db.connect()
-    .then(() => {
-      connected = true;
-      console.log('✅ pg-storage подключён к PostgreSQL');
-    })
-    .catch(e => {
-      console.error('❌ pg-storage connect:', e.message);
-      connecting = null;
-      throw e;
-    });
-  return connecting;
-}
-
-/* ---------- Сохранить файл в БД ---------- */
-async function uploadToPostgres(buffer, fileName, mimeType) {
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
-  });
-  await client.connect();
+/* ---------- Создать таблицу для файлов ---------- */
+async function initFilesTable() {
   try {
-    await client.query('BEGIN');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS files (
+        id TEXT PRIMARY KEY,
+        data BYTEA NOT NULL,
+        name TEXT,
+        mime TEXT,
+        size INTEGER,
+        created_at BIGINT
+      )
+    `);
+    console.log('✅ Таблица files готова');
+  } catch (e) {
+    console.error('❌ initFilesTable:', e.message);
+  }
+}
+initFilesTable();
 
-    const oidRes = await client.query('SELECT lo_create(0) AS oid');
-    const oid = oidRes.rows[0].oid;
+/* ---------- Сохранить файл ---------- */
+async function uploadToPostgres(buffer, fileName, mimeType) {
+  try {
+    const id = 'f_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
 
-    // INV_WRITE = 0x00020000
-    const fdRes = await client.query('SELECT lo_open($1, $2) AS fd', [oid, 131072]);
-    const fd = fdRes.rows[0].fd;
+    await pool.query(
+      `INSERT INTO files (id, data, name, mime, size, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [id, buffer, fileName, mimeType, buffer.length, Date.now()]
+    );
 
-    const CHUNK = 2 * 1024 * 1024;
-    for (let i = 0; i < buffer.length; i += CHUNK) {
-      const chunk = buffer.slice(i, i + CHUNK);
-      await client.query('SELECT lowrite($1, $2)', [fd, chunk]);
-    }
-
-    await client.query('SELECT lo_close($1)', [fd]);
-    await client.query('COMMIT');
-
-    console.log('✅ Файл сохранён в PostgreSQL, oid:', oid, 'размер:', buffer.length);
+    console.log('✅ Файл сохранён в PostgreSQL, id:', id, 'размер:', buffer.length);
 
     return {
       ok: true,
-      oid: oid,
-      fileId: String(oid),
+      fileId: id,
       name: fileName,
       size: buffer.length,
       mime: mimeType
     };
   } catch (e) {
-    try { await client.query('ROLLBACK'); } catch (_) {}
     console.error('❌ uploadToPostgres:', e.message);
     return { ok: false, error: e.message };
-  } finally {
-    await client.end().catch(() => {});
   }
 }
 
-/* ---------- Прочитать файл из БД ---------- */
-async function readFromPostgres(oid) {
-  console.log('📖 readFromPostgres START, oid =', oid);
-
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
-  });
-
+/* ---------- Прочитать файл ---------- */
+async function readFromPostgres(fileId) {
   try {
-    await client.connect();
-    console.log('📖 connected');
+    const r = await pool.query(
+      `SELECT data, name, mime FROM files WHERE id = $1`,
+      [fileId]
+    );
+    if (!r.rows[0]) return null;
 
-    const fdRes = await client.query('SELECT lo_open($1, $2) AS fd', [oid, 262144]);
-    console.log('📖 lo_open result:', JSON.stringify(fdRes.rows[0]));
-    const fd = fdRes.rows[0].fd;
-
-    const chunks = [];
-    const CHUNK = 2 * 1024 * 1024;
-    let iteration = 0;
-
-    while (true) {
-      iteration++;
-      console.log('📖 iteration', iteration, 'calling loread(fd=' + fd + ')');
-      const r = await client.query('SELECT loread($1, $2) AS data', [fd, CHUNK]);
-      const raw = r.rows[0].data;
-
-      console.log('📖 loread raw type:', typeof raw, 'isBuffer:', Buffer.isBuffer(raw), 'len:', raw ? raw.length : 0);
-
-      let buf;
-      if (Buffer.isBuffer(raw)) buf = raw;
-      else if (typeof raw === 'string') buf = Buffer.from(raw.replace(/^\\x/, ''), 'hex');
-      else if (raw === null) break;
-      else buf = Buffer.from(raw);
-
-      if (!buf || buf.length === 0) break;
-      chunks.push(buf);
-      if (buf.length < CHUNK) break;
+    const row = r.rows[0];
+    // pg отдаёт bytea как Buffer, но иногда как hex-строку '\x...'
+    let buf = row.data;
+    if (!Buffer.isBuffer(buf) && typeof buf === 'string') {
+      buf = Buffer.from(buf.replace(/^\\x/, ''), 'hex');
     }
-
-    console.log('📖 lo_close');
-    await client.query('SELECT lo_close($1)', [fd]);
-
-    const total = chunks.reduce((s, c) => s + c.length, 0);
-    console.log('📖 readFromPostgres DONE, total size =', total);
-
-    return Buffer.concat(chunks);
+    return { buffer: buf, name: row.name, mime: row.mime };
   } catch (e) {
-    console.error('❌ readFromPostgres ERROR:', e.message);
-    console.error('❌ STACK:', e.stack);
-    throw e;
-  } finally {
-    await client.end().catch(() => {});
+    console.error('❌ readFromPostgres:', e.message);
+    return null;
   }
 }
 
-function makeFileIdUrl(oid) {
-  return '/pg-file/' + oid;
+function makeFileIdUrl(fileId) {
+  return '/pg-file/' + fileId;
 }
 
-module.exports = { uploadToPostgres, readFromPostgres, makeFileIdUrl };
+module.exports = { uploadToPostgres, readFromPostgres, makeFileIdUrl, pool };
