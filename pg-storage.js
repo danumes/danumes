@@ -77,22 +77,33 @@ async function uploadToPostgres(buffer, fileName, mimeType) {
 
 /* ---------- Прочитать файл из БД ---------- */
 async function readFromPostgres(oid) {
+  console.log('📖 readFromPostgres START, oid =', oid);
+
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
   });
-  await client.connect();
+
   try {
-    // INV_READ = 0x00040000
+    await client.connect();
+    console.log('📖 connected');
+
     const fdRes = await client.query('SELECT lo_open($1, $2) AS fd', [oid, 262144]);
+    console.log('📖 lo_open result:', JSON.stringify(fdRes.rows[0]));
     const fd = fdRes.rows[0].fd;
 
     const chunks = [];
     const CHUNK = 2 * 1024 * 1024;
+    let iteration = 0;
+
     while (true) {
+      iteration++;
+      console.log('📖 iteration', iteration, 'calling loread(fd=' + fd + ')');
       const r = await client.query('SELECT loread($1, $2) AS data', [fd, CHUNK]);
       const raw = r.rows[0].data;
-      // pg возвращает bytea как Buffer, но иногда как hex-строку '\x...'
+
+      console.log('📖 loread raw type:', typeof raw, 'isBuffer:', Buffer.isBuffer(raw), 'len:', raw ? raw.length : 0);
+
       let buf;
       if (Buffer.isBuffer(raw)) buf = raw;
       else if (typeof raw === 'string') buf = Buffer.from(raw.replace(/^\\x/, ''), 'hex');
@@ -104,9 +115,17 @@ async function readFromPostgres(oid) {
       if (buf.length < CHUNK) break;
     }
 
+    console.log('📖 lo_close');
     await client.query('SELECT lo_close($1)', [fd]);
 
+    const total = chunks.reduce((s, c) => s + c.length, 0);
+    console.log('📖 readFromPostgres DONE, total size =', total);
+
     return Buffer.concat(chunks);
+  } catch (e) {
+    console.error('❌ readFromPostgres ERROR:', e.message);
+    console.error('❌ STACK:', e.stack);
+    throw e;
   } finally {
     await client.end().catch(() => {});
   }
