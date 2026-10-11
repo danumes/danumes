@@ -9,43 +9,8 @@ const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
-const { Client } = require('pg');
+const { createClient } = require('@libsql/client');
 
-const db = new Client({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
-
-db.connect()
-  .then(() => console.log('✅ PostgreSQL подключена'))
-  .catch(e => console.error('❌ Ошибка подключения:', e.message));
-
-async function dbGet(sql, params = []) {
-  try {
-    const r = await db.query(sql, params);
-    return r.rows[0] || null;
-  } catch (e) { console.error('dbGet:', e.message); return null; }
-}
-
-async function dbAll(sql, params = []) {
-  try {
-    const r = await db.query(sql, params);
-    return r.rows || [];
-  } catch (e) { console.error('dbAll:', e.message); return []; }
-}
-
-async function dbRun(sql, params = []) {
-  try { return await db.query(sql, params); }
-  catch (e) {
-    console.error('dbRun FAIL:', e.message);
-    return null;
-  }
-}
-
-async function dbExec(sql) {
-  try { await db.query(sql); return true; }
-  catch (e) { console.error('dbExec:', e.message); return false; }
-}
 /* ---------- .ENV ---------- */
 try {
   if (fs.existsSync('.env')) {
