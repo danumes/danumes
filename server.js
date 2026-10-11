@@ -465,7 +465,7 @@ io.on('connection', socket => {
     socket.emit('chat:opened', result);
   });
 
-  socket.on('message:send', async ({ chatId, text }, cb) => {
+socket.on('message:send', async ({ chatId, text, attachments }, cb) => {
     let me = users.get(socket.id);
     if (!me) { const tok = socket.handshake?.auth?.token; if (tok) { const row = await tryAuthByToken(socket, tok); if (row) me = users.get(socket.id); } }
     if (!me) return cb && cb({ ok: false, error: 'not-auth' });
@@ -477,7 +477,7 @@ io.on('connection', socket => {
     const id = uid('m');
     const time = Date.now();
     await dbRun(`INSERT INTO messages (id, chat_id, type, user_id, username, color, avatar, avatar_url, text, time, reactions, reply_to, edited, deleted, deleted_for, censored) VALUES (?, ?, 'user', ?, ?, ?, ?, ?, ?, ?, '{}', NULL, 0, 0, '[]', ?)`,
-      [id, chatId, me.usernameLower, me.username, me.color, me.avatar, me.avatarUrl, clean, time, hadBad ? 1 : 0]);
+      [id, chatId, me.usernameLower, me.username, me.color, me.avatar, me.avatarUrl, clean, time, attachments ? JSON.stringify(attachments) : null, hadBad ? 1 : 0]);
     const saved = await dbGet('SELECT * FROM messages WHERE id=?', [id]);
     await emitToChat(chatId, 'message', msgFromDb(saved));
     if (cb) cb({ ok: true, msg: msgFromDb(saved) });
