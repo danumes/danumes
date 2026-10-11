@@ -1182,6 +1182,31 @@ function updateMainHead() {
   }
   const ca = document.querySelector('.call-actions');
   if (ca) ca.style.display = (meta.type === 'private') ? 'flex' : 'none';
+
+  // Клик по шапке (имя или аватар) → профиль (только для личных чатов)
+  if (meta.type === 'private' && meta.user) {
+    const targetKey = keyOf(meta.user.username);
+
+    const infoEl = document.getElementById('mhInfo');
+    const nameEl2 = document.getElementById('mhName');
+    const avaEl2 = document.getElementById('mhAva');
+
+    // Вешаем на само mh-info и на аватар — если оба есть
+    const openHandler = (e) => {
+      e.stopPropagation();
+      openUserProfile(targetKey);
+    };
+
+    // Ищем контейнер mh-info (если у тебя его нет — берём nameEl)
+    const clickTargets = [];
+    if (nameEl2) clickTargets.push(nameEl2);
+    if (avaEl2) clickTargets.push(avaEl2);
+
+    clickTargets.forEach(el => {
+      el.style.cursor = 'pointer';
+      el.onclick = openHandler;
+    });
+  }
 }
 
 function updatePinnedBar() {
@@ -1215,7 +1240,25 @@ function renderTyping() {
 
 function showCtxChat(x, y, chatId) {
   const menu = $('ctxChat'); if (!menu) return;
+
+  // Определяем, личный это чат и кто собеседник
+  let peerUsername = null;
+  if (!chatId.startsWith('g_') && me) {
+    const parts = chatId.split('::');
+    if (parts.length === 2) {
+      const myKey = keyOf(me.username);
+      const peerKey = parts[0] === myKey ? parts[1] : parts[0];
+      const u = usersMap.get(peerKey);
+      if (u) peerUsername = u.username;
+    }
+  }
+
+  const profileBtn = peerUsername
+    ? `<button class="ctx-item" data-action="profile"><span class="ico">👤</span><span>Профиль</span></button>`
+    : '';
+
   menu.innerHTML = `
+    ${profileBtn}
     <button class="ctx-item" data-action="pin"><span class="ico">📌</span><span>${pinned.has(chatId) ? 'Открепить' : 'Закрепить'}</span></button>
     <button class="ctx-item" data-action="mute"><span class="ico">🔇</span><span>${muted.has(chatId) ? 'Включить звук' : 'Без звука'}</span></button>
     <button class="ctx-item danger" data-action="clear"><span class="ico">🗑</span><span>Очистить</span></button>
@@ -1227,7 +1270,8 @@ function showCtxChat(x, y, chatId) {
   menu.querySelectorAll('.ctx-item').forEach(item => {
     item.onclick = () => {
       const a = item.dataset.action;
-      if (a === 'pin') socket.emit('chat:pin', { chatId });
+      if (a === 'profile' && peerUsername) openUserProfile(peerUsername);
+      else if (a === 'pin') socket.emit('chat:pin', { chatId });
       else if (a === 'mute') socket.emit('chat:mute', { chatId });
       else if (a === 'clear') { if (confirm('Очистить?')) socket.emit('chat:clear', { chatId }); }
       menu.classList.remove('on');
@@ -2526,6 +2570,157 @@ function scrollToMessage(msgId) {
 }
 
 /* ============================================================
+   ПРОФИЛЬ ДРУГОГО ПОЛЬЗОВАТЕЛЯ
+   ============================================================ */
+function openUserProfile(username) {
+  if (!username) return;
+  const key = keyOf(username);
+  const user = usersMap.get(key);
+  const modal = $('profileModal');
+  const body = $('upBody');
+  const title = $('upTitle');
+  if (!modal || !body) return;
+
+  if (title) title.textContent = 'Профиль';
+  modal.classList.add('on');
+
+  // Если пользователя нет в usersMap — пробуем догрузить через поиск
+  if (!user) {
+    body.innerHTML = '<div class="up-loading"><div class="up-spinner"></div><div class="up-loading-text">Загрузка профиля…</div></div>';
+    socket.emit('users:search', { query: key }, list => {
+      const found = (list || []).find(u => keyOf(u.username) === key);
+      if (found) {
+        usersMap.set(key, found);
+        renderUserProfile(found);
+      } else {
+        body.innerHTML = '<div class="up-error">⚠️ Пользователь не найден</div>';
+      }
+    });
+    return;
+  }
+
+  renderUserProfile(user);
+}
+
+function renderUserProfile(user) {
+  const body = $('upBody');
+  if (!body) return;
+
+  const key = keyOf(user.username);
+  const isMe = me && key === keyOf(me.username);
+  const color = user.color || '#a78bfa';
+  const username = user.username || key;
+  const handle = '@' + key;
+  const bio = (user.bio || '').trim();
+
+  // Аватар
+  let avaHtml = '';
+  if (user.avatarUrl) {
+    avaHtml = `<div class="up-ava" style="background-image:url(${esc(user.avatarUrl)})"></div>`;
+  } else if (user.avatar && /\p{Emoji}/u.test(user.avatar)) {
+    avaHtml = `<div class="up-ava" style="background:${color}">${user.avatar}</div>`;
+  } else {
+    avaHtml = `<div class="up-ava" style="background:${color}">${(username[0] || '?').toUpperCase()}</div>`;
+  }
+
+  // Статус
+  let statusHtml = '';
+  if (user.online) {
+    statusHtml = '<div class="up-status online"><span class="up-dot"></span>в сети</div>';
+  } else {
+    statusHtml = '<div class="up-status"><span class="up-dot off"></span>не в сети</div>';
+  }
+
+  // Верификация
+  const verify = verifyIconsHtml(user);
+
+  // Общие чаты / группы (считаем локально)
+  let commonChats = 0, commonGroups = 0;
+  if (!isMe && me) {
+    const myKey = keyOf(me.username);
+    messagesByChat.forEach((msgs, chatId) => {
+      if (chatId.startsWith('g_')) return;
+      const parts = chatId.split('::');
+      if (parts.length !== 2) return;
+      if ((parts[0] === myKey || parts[1] === myKey) && (parts[0] === key || parts[1] === key)) commonChats++;
+    });
+    groups.forEach(g => {
+      const members = (g.members || []).map(m => keyOf(m));
+      if (members.includes(myKey) && members.includes(key)) commonGroups++;
+    });
+  }
+
+  // Кнопки действий
+  let actionsHtml = '';
+  if (isMe) {
+    actionsHtml = `
+      <div class="up-actions">
+        <button class="up-btn primary" id="upEditMe">Редактировать профиль</button>
+      </div>`;
+  } else {
+    actionsHtml = `
+      <div class="up-actions">
+        <button class="up-btn primary" id="upWriteBtn">✉ Написать сообщение</button>
+        <div class="up-actions-row">
+          <button class="up-btn" id="upCallBtn">📞 Звонок</button>
+          <button class="up-btn" id="upVideoBtn">📹 Видео</button>
+        </div>
+      </div>`;
+  }
+
+  // Инфо-блоки
+  const bioHtml = bio
+    ? `<div class="up-section">
+         <div class="up-section-title">О СЕБЕ</div>
+         <div class="up-info-row">📝 <span>${esc(bio)}</span></div>
+       </div>`
+    : '';
+
+  const commonHtml = isMe ? '' : `
+    <div class="up-section">
+      <div class="up-section-title">ОБЩЕЕ</div>
+      <div class="up-info-row">💬 <span>${commonChats} ${plural(commonChats, 'личный чат', 'личных чата', 'личных чатов')}</span></div>
+      <div class="up-info-row">👥 <span>${commonGroups} ${plural(commonGroups, 'общая группа', 'общие группы', 'общих групп')}</span></div>
+    </div>`;
+
+  body.innerHTML = `
+    <div class="up-hero">
+      ${avaHtml}
+      <div class="up-name">${esc(username)}${verify}</div>
+      <div class="up-handle">${esc(handle)}</div>
+      ${statusHtml}
+    </div>
+    ${actionsHtml}
+    ${bioHtml}
+    ${commonHtml}
+  `;
+
+  // Привязка кнопок
+  $('upEditMe') && ($('upEditMe').onclick = () => {
+    closeUserProfile();
+    $('editProfileBtn')?.click();
+  });
+
+  $('upWriteBtn') && ($('upWriteBtn').onclick = () => {
+    closeUserProfile();
+    socket.emit('chat:open', { withUsername: username });
+  });
+
+  $('upCallBtn') && ($('upCallBtn').onclick = () => {
+    toast('📞 Звонки — скоро');
+  });
+
+  $('upVideoBtn') && ($('upVideoBtn').onclick = () => {
+    toast('📹 Видео — скоро');
+  });
+}
+
+function closeUserProfile() {
+  const modal = $('profileModal');
+  if (modal) modal.classList.remove('on');
+}
+
+/* ============================================================
    INIT ALL
    ============================================================ */
 function initAll() {
@@ -2549,6 +2744,8 @@ function initAll() {
   initMessageInteractions();
   initHotkeys();
 
+     // Кнопка закрытия профиля
+  $('upClose') && ($('upClose').onclick = closeUserProfile);
   document.querySelectorAll('.emoji-tabs button').forEach(b => b.onclick = () => renderEmojiTab(b.dataset.emojiTab));
   document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('on'); }));
 }
