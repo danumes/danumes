@@ -453,7 +453,9 @@ socket.on('message:send', async ({ chatId, text, attachments }, cb) => {
     if (!me) return cb && cb({ ok: false, error: 'not-auth' });
     if (!(await canAccessChat(chatId, me.usernameLower))) return cb && cb({ ok: false, error: 'no-access' });
     let clean = String(text || '').trim().slice(0, 4000);
-    if (!clean) return cb && cb({ ok: false, error: 'empty' });
+if (!clean && (!attachments || attachments.length === 0)) {
+  return cb && cb({ ok: false, error: 'empty' });
+}
     const hadBad = hasBadWords(clean);
     if (hadBad) clean = filterBadWords(clean);
     const id = uid('m');
