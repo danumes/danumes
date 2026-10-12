@@ -682,12 +682,219 @@ if (!clean && (!attachments || attachments.length === 0) && !sticker && !sticker
     }
   });
 
+  /* ============================================================
+     ЗВОНКИ (WebRTC сигналинг)
+     ============================================================ */
+
+  // Инициатор звонит
+  socket.on('call:invite', async ({ withUser, callType }, cb) => {
+    try {
+      const me = users.get(socket.id);
+      if (!me) return cb && cb({ ok: false, error: 'not-auth' });
+      const targetKey = String(withUser || '').toLowerCase();
+      if (!targetKey || targetKey === me.usernameLower) return cb && cb({ ok: false, error: 'invalid-user' });
+
+      // Проверяем, что получатель онлайн
+      const targetSet = onlineByUsername.get(targetKey);
+      if (!targetSet || targetSet.size === 0) {
+        return cb && cb({ ok: false, error: 'user-offline' });
+      }
+
+      // Генерируем callId
+      const callId = 'call_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+
+      // Создаём запись звонка
+      const call = {
+        id: callId,
+        from: me.usernameLower,
+        fromUsername: me.username,
+        fromColor: me.color,
+        fromAvatarUrl: me.avatarUrl,
+        fromAvatar: me.avatar,
+        to: targetKey,
+        type: callType === 'video' ? 'video' : 'audio',
+        status: 'ringing',
+        startedAt: Date.now(),
+        initiatorSocket: socket.id
+      };
+      activeCalls.set(callId, call);
+      socketToCall.set(socket.id, callId);
+
+      // Отправляем входящий второму пользователю
+      emitToUser(targetKey, 'call:incoming', {
+        callId,
+        callType: call.type,
+        from: {
+          username: me.username,
+          usernameLower: me.usernameLower,
+          color: me.color,
+          avatar: me.avatar,
+          avatarUrl: me.avatarUrl
+        }
+      });
+
+      console.log(`📞 call:invite ${me.usernameLower} → ${targetKey} [${call.type}] id=${callId}`);
+      if (cb) cb({ ok: true, callId });
+    } catch (e) {
+      console.error('call:invite', e);
+      if (cb) cb({ ok: false, error: 'server-error' });
+    }
+  });
+
+  // Принял звонок
+  socket.on('call:accept', async ({ callId }, cb) => {
+    try {
+      const me = users.get(socket.id);
+      if (!me) return cb && cb({ ok: false });
+      const call = activeCalls.get(callId);
+      if (!call) return cb && cb({ ok: false, error: 'no-call' });
+      if (call.to !== me.usernameLower) return cb && cb({ ok: false, error: 'not-for-you' });
+
+      call.status = 'active';
+      call.acceptedAt = Date.now();
+      socketToCall.set(socket.id, callId);
+
+      // Сообщаем инициатору
+      emitToUser(call.from, 'call:accepted', {
+        callId,
+        by: {
+          username: me.username,
+          usernameLower: me.usernameLower
+        }
+      });
+
+      console.log(`✅ call:accept ${me.usernameLower} [${callId}]`);
+      if (cb) cb({ ok: true });
+    } catch (e) {
+      console.error('call:accept', e);
+      if (cb) cb({ ok: false });
+    }
+  });
+
+  // Отклонил
+  socket.on('call:reject', async ({ callId }, cb) => {
+    try {
+      const me = users.get(socket.id);
+      if (!me) return cb && cb({ ok: false });
+      const call = activeCalls.get(callId);
+      if (!call) return cb && cb({ ok: false });
+
+      emitToUser(call.from, 'call:rejected', { callId });
+      activeCalls.delete(callId);
+      socketToCall.delete(socket.id);
+
+      console.log(`❌ call:reject ${me.usernameLower} [${callId}]`);
+      if (cb) cb({ ok: true });
+    } catch (e) {
+      console.error('call:reject', e);
+      if (cb) cb({ ok: false });
+    }
+  });
+
+  // Завершил
+  socket.on('call:end', async ({ callId }, cb) => {
+    try {
+      const me = users.get(socket.id);
+      if (!me) return cb && cb({ ok: false });
+      const call = activeCalls.get(callId);
+      if (!call) return cb && cb({ ok: false });
+
+      // Сообщаем обоим
+      emitToUser(call.from, 'call:ended', { callId });
+      emitToUser(call.to, 'call:ended', { callId });
+
+      // Если был активный звонок — сохраняем в историю
+      if (call.status === 'active' && call.acceptedAt) {
+        const durationSec = Math.floor((Date.now() - call.acceptedAt) / 1000);
+        try {
+          const chatId = chatKey(call.from, call.to);
+          const msgId = uid('m');
+          await dbRun(
+            `INSERT INTO messages (id, chat_id, type, user_id, username, text, time, call_type, call_status, duration) VALUES (?, ?, 'user', ?, ?, '', ?, ?, 'ended', ?)`,
+            [msgId, chatId, call.from, call.fromUsername, Date.now(), call.type, durationSec]
+          );
+          const saved = await dbGet('SELECT * FROM messages WHERE id=?', [msgId]);
+          await emitToChat(chatId, 'message', msgFromDb(saved));
+        } catch (e) {
+          console.error('call:end: save history', e.message);
+        }
+      }
+
+      activeCalls.delete(callId);
+      socketToCall.delete(socket.id);
+
+      console.log(`🔚 call:end [${callId}]`);
+      if (cb) cb({ ok: true });
+    } catch (e) {
+      console.error('call:end', e);
+      if (cb) cb({ ok: false });
+    }
+  });
+
+  // WebRTC: offer
+  socket.on('webrtc:offer', async ({ callId, toUsername, offer }) => {
+    try {
+      const me = users.get(socket.id);
+      if (!me) return;
+      emitToUser(toUsername, 'webrtc:offer', {
+        callId,
+        from: me.usernameLower,
+        fromUsername: me.username,
+        offer
+      });
+    } catch (e) {
+      console.error('webrtc:offer', e);
+    }
+  });
+
+  // WebRTC: answer
+  socket.on('webrtc:answer', async ({ callId, toUsername, answer }) => {
+    try {
+      const me = users.get(socket.id);
+      if (!me) return;
+      emitToUser(toUsername, 'webrtc:answer', {
+        callId,
+        from: me.usernameLower,
+        fromUsername: me.username,
+        answer
+      });
+    } catch (e) {
+      console.error('webrtc:answer', e);
+    }
+  });
+
+  // WebRTC: ICE candidate
+  socket.on('webrtc:ice', async ({ callId, toUsername, candidate }) => {
+    try {
+      const me = users.get(socket.id);
+      if (!me) return;
+      emitToUser(toUsername, 'webrtc:ice', {
+        callId,
+        from: me.usernameLower,
+        candidate
+      });
+    } catch (e) {
+      console.error('webrtc:ice', e);
+    }
+  });
+   
   socket.on('disconnect', async () => {
     const me = users.get(socket.id);
     if (me) {
       const key = me.usernameLower;
       try { await dbRun('INSERT OR REPLACE INTO last_seen (username, time) VALUES (?, ?)', [key, Date.now()]); } catch (e) {}
       users.delete(socket.id);
+             // Если у пользователя был активный звонок — завершаем
+      const callId = socketToCall.get(socket.id);
+      if (callId) {
+        const call = activeCalls.get(callId);
+        if (call) {
+          emitToUser(call.from, 'call:ended', { callId });
+          emitToUser(call.to, 'call:ended', { callId });
+          activeCalls.delete(callId);
+        }
+        socketToCall.delete(socket.id);
+      }
       const set = onlineByUsername.get(key);
       if (set) { set.delete(socket.id); if (set.size === 0) onlineByUsername.delete(key); }
       try { await broadcastUsersUpdate(); } catch (e) {}
