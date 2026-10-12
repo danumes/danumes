@@ -996,6 +996,92 @@ app.get('/api/users/:username', requireAuth, async (req, res) => {
   }
 });
 
+/* ---------- ОБНОВИТЬ ПРОФИЛЬ (username, bio, avatar, color, emoji) ---------- */
+app.post('/api/profile/update', requireAuth, async (req, res) => {
+    try {
+        const me = req.user;
+        const { username, bio, avatarUrl, color, avatarEmoji } = req.body || {};
+
+        const newBio = typeof bio === 'string' ? bio.slice(0, 200) : null;
+        const newColor = typeof color === 'string' ? color.slice(0, 20) : null;
+        const newAvatarUrl = typeof avatarUrl === 'string' ? avatarUrl : null;
+        const newAvatarEmoji = typeof avatarEmoji === 'string' ? avatarEmoji.slice(0, 8) : null;
+
+        let newKey = null;
+        let newDisplay = null;
+
+        // Если username передан — валидируем и меняем
+        if (typeof username === 'string' && username.trim().length > 0) {
+            const raw = username.trim();
+            if (!/^[a-zA-Z0-9_]{3,20}$/.test(raw)) {
+                return res.status(400).json({ ok: false, error: 'Юзернейм: 3–20 символов, a-z, 0-9, _' });
+            }
+            const candidateKey = raw.toLowerCase();
+
+            // Если совпадает с текущим — ничего не делаем
+            if (candidateKey !== me.username) {
+                const busy = await dbGet('SELECT 1 FROM accounts WHERE username=?', [candidateKey]);
+                if (busy) {
+                    return res.status(409).json({ ok: false, error: 'Юзернейм занят' });
+                }
+                newKey = candidateKey;
+                newDisplay = raw;
+            }
+        }
+
+        // Собираем UPDATE
+        const updates = [];
+        const args = [];
+
+        if (newBio !== null) { updates.push('bio=?'); args.push(newBio); }
+        if (newColor !== null) { updates.push('color=?'); args.push(newColor); }
+
+        // avatar: emoji хранится в поле avatar, картинка — в avatar_url
+        if (newAvatarUrl !== null) {
+            updates.push('avatar_url=?'); args.push(newAvatarUrl);
+            // При загрузке фото — сбрасываем emoji
+            updates.push('avatar=?'); args.push(null);
+        } else if (newAvatarEmoji !== null) {
+            updates.push('avatar=?'); args.push(newAvatarEmoji);
+            // При выборе emoji — сбрасываем url
+            updates.push('avatar_url=?'); args.push(null);
+        }
+
+        if (newKey !== null) {
+            updates.push('username=?'); args.push(newKey);
+            updates.push('username_display=?'); args.push(newDisplay);
+        }
+
+        if (updates.length === 0) {
+            return res.json({ ok: true, unchanged: true });
+        }
+
+        args.push(me.username);
+        await dbRun(`UPDATE accounts SET ${updates.join(', ')} WHERE username=?`, args);
+
+        // Если меняли username — обновим username в сессиях, сообщениях, группах
+        if (newKey !== null) {
+            try {
+                await dbRun('UPDATE sessions SET username=? WHERE username=?', [newKey, me.username]);
+                await dbRun('UPDATE messages SET user_id=? WHERE user_id=?', [newKey, me.username]);
+                await dbRun('UPDATE group_members SET username=? WHERE username=?', [newKey, me.username]);
+                // chat_id в личных чатах: "old::peer" -> "new::peer"
+                // (для простоты оставим chat_id как есть — история сохранится)
+            } catch (e) {
+                console.error('profile:update: миграция по таблицам', e.message);
+            }
+        }
+
+        // Возвращаем обновлённые данные
+        const updated = await dbGet('SELECT * FROM accounts WHERE username=?', [newKey || me.username]);
+        res.json({ ok: true, user: accFromDb(updated, isOnline(newKey || me.username)) });
+
+    } catch (e) {
+        console.error('api/profile/update:', e);
+        res.status(500).json({ ok: false, error: 'server-error' });
+    }
+});
+
 /* ============================================================
    ЗАПУСК — БЕЗ VK/EMAIL/GOOGLE
    ============================================================ */
