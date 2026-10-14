@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<meta name="theme-color" content="#1a1430" />
+<meta name="theme-color" content="#151515" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <title>Danumes</title>
 <link rel="icon" type="image/svg+xml" href="/logo.svg" />
@@ -15,7 +15,6 @@
 
 <!-- ============ АВТОРИЗАЦИЯ ============ -->
 <div id="auth">
-  <!-- ЭКРАН ВХОДА -->
   <div class="auth-screen on" id="screenLogin">
     <div class="auth-logo-top"><img src="/logo.svg" alt="Danumes" /></div>
     <div class="auth-card">
@@ -28,8 +27,8 @@
         <input class="auth-input" id="loginLogin" placeholder="username или почта" maxlength="80" autocomplete="username" />
         <label class="auth-label">Пароль</label>
         <input class="auth-input" id="loginPassword" type="password" placeholder="Пароль" autocomplete="current-password" />
-        <button type="submit" class="auth-btn" id="loginBtn">Далее</button>
-        <button type="button" class="auth-link-btn" id="linkToRegister">Зарегистрироваться</button>
+        <button type="submit" class="auth-btn" id="loginBtn">Войти</button>
+        <button type="button" class="auth-link-btn" id="linkToRegister">Создать аккаунт</button>
         <button type="button" class="auth-link-btn muted" id="linkForgot">Забыл пароль</button>
       </form>
 
@@ -47,11 +46,10 @@
     </div>
   </div>
 
-  <!-- ЭКРАН РЕГИСТРАЦИИ -->
   <div class="auth-screen" id="screenRegister">
     <div class="auth-logo-top"><img src="/logo.svg" alt="Danumes" /></div>
     <div class="auth-card">
-      <h1 class="auth-h1">Создать<br>аккаунт</h1>
+      <h1 class="auth-h1">Создать аккаунт</h1>
       <p class="auth-p">Войти потом можно через «Войти»</p>
 
       <form id="formRegister" autocomplete="off">
@@ -68,7 +66,7 @@
 
         <div class="auth-info-box">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-          <span>Имя для поиска — «@логин» — можно будет выбрать потом в настройках. Пока вас найдут по имени.</span>
+          <span>Имя для поиска — «@логин» — можно будет выбрать потом в настройках.</span>
         </div>
 
         <button type="submit" class="auth-btn" id="regBtn">Далее</button>
@@ -78,10 +76,10 @@
   </div>
 </div>
 
-<!-- EMAIL ВХОД -->
+<!-- ============ EMAIL ВХОД ============ -->
 <div class="modal-bg" id="emailLoginModal">
   <div class="modal">
-    <div class="modal-head"><h3>Вход по Email</h3><button class="icon-btn" id="emlClose">✕</button></div>
+    <div class="modal-head"><h3>Вход по Email</h3><button class="icon-btn" id="emlClose"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body left">
       <div id="emlStep1">
         <p class="modal-note">Введи email — пришлём 6-значный код.</p>
@@ -108,10 +106,10 @@
   </div>
 </div>
 
-<!-- VK ВХОД -->
+<!-- ============ VK ВХОД ============ -->
 <div class="modal-bg" id="vkLoginModal">
   <div class="modal">
-    <div class="modal-head"><h3>Вход через VK</h3><button class="icon-btn" id="vklClose">✕</button></div>
+    <div class="modal-head"><h3>Вход через VK</h3><button class="icon-btn" id="vklClose"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body left">
       <div id="vklStep1">
         <p class="modal-note">Отправь боту код:</p>
@@ -137,16 +135,46 @@
   </div>
 </div>
 
-<!-- ПРИЛОЖЕНИЕ -->
+<!-- ============ ПРИЛОЖЕНИЕ ============ -->
 <div id="app">
+
+  <!-- RAIL — узкая полоса слева -->
+  <aside class="rail" id="rail">
+    <button class="rail-avatar" id="railAvatar" title="Профиль">
+      <div class="ava sm" id="railAvaImg" style="background:var(--grad)">?</div>
+    </button>
+
+    <div class="rail-divider"></div>
+
+    <button class="rail-btn on" data-rail="chats" title="Чаты">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    </button>
+
+    <button class="rail-btn" data-rail="search" title="Поиск">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
+
+    <button class="rail-btn" data-rail="newchat" title="Новый чат">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+
+    <button class="rail-btn" data-rail="calls" title="Звонки">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+    </button>
+
+    <div class="rail-divider"></div>
+
+    <button class="rail-btn" data-rail="settings" title="Настройки">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </aside>
+
+  <!-- SIDEBAR -->
   <aside class="side" id="side">
     <div class="side-head">
-      <div class="brand"><img src="/logo.svg" class="brand-logo" alt="" /><div class="brand-name">Danumes</div></div>
+      <h1 class="side-title">Danumes</h1>
       <button class="icon-btn" id="btnNewGroup" title="Создать группу">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>
-      </button>
-      <button class="icon-btn" id="btnNewChat" title="Найти человека">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </button>
       <button class="icon-btn" id="btnSettings" title="Настройки">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -160,19 +188,13 @@
       </button>
     </div>
 
-    <div class="stories-bar" id="storiesBar">
-      <div class="story-add" id="storyAdd">
-        <div class="story-ring story-ring-add"><div class="story-inner"><span class="story-plus">+</span></div></div>
-        <div class="story-name">Моя</div>
-      </div>
-      <div class="stories-list" id="storiesList"></div>
-    </div>
-
     <div class="search-wrap">
       <div class="search-box">
-        <span class="s-icon">🔍</span>
+        <svg class="s-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input id="searchInput" type="text" placeholder="Поиск" />
-        <button class="s-clear" id="searchClear">✕</button>
+        <button class="s-clear" id="searchClear">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
       <div class="tabs">
         <button class="tab on" data-tab="all">Все</button>
@@ -196,6 +218,7 @@
     </div>
   </aside>
 
+  <!-- MAIN -->
   <main class="main" id="main">
     <div class="empty" id="emptyState">
       <img src="/logo.svg" class="empty-logo" alt="" />
@@ -206,9 +229,9 @@
     <div id="chatView" style="display:none; flex-direction:column; height:100%; min-height:0; overflow:hidden;">
       <div class="main-head">
         <button class="icon-btn back-btn" id="btnBack">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
         </button>
-        <div class="ava sm" id="mhAva" style="background:#a855f7">?</div>
+        <div class="ava sm" id="mhAva" style="background:#6366f1">?</div>
         <div class="mh-info">
           <div class="mh-name" id="mhName">—</div>
           <div class="mh-status" id="mhStatus">—</div>
@@ -229,13 +252,14 @@
         </button>
       </div>
 
-      <!-- Панель поиска по сообщениям -->
       <div id="chatSearchBar" style="display:none;">
         <div class="chat-search-input-wrap">
-          <span class="cs-icon">🔍</span>
+          <svg class="cs-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input id="chatSearchInput" type="text" placeholder="Поиск по сообщениям…" autocomplete="off" />
           <span id="chatSearchCount" class="cs-count">0</span>
-          <button class="icon-btn cs-close" id="chatSearchClose">✕</button>
+          <button class="icon-btn cs-close" id="chatSearchClose">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
         <div id="chatSearchResults" class="chat-search-results"></div>
       </div>
@@ -246,7 +270,9 @@
           <div class="pin-label">Закреплено</div>
           <div class="pin-text" id="pinnedBarText"></div>
         </div>
-        <button class="icon-btn" id="pinnedUnpin" style="width:26px;height:26px;">✕</button>
+        <button class="icon-btn" id="pinnedUnpin" style="width:26px;height:26px;">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
 
       <div class="msgs" id="msgs"></div>
@@ -256,7 +282,9 @@
       <div class="composer-wrap">
         <div class="reply-bar" id="replyBar">
           <div class="reply-bar-content"><b id="replyName">—</b><span id="replyText">—</span></div>
-          <button class="icon-btn" id="replyClose" style="width:26px;height:26px;">✕</button>
+          <button class="icon-btn" id="replyClose" style="width:26px;height:26px;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
         <div class="attach-preview" id="attachPreview" style="display:none"></div>
         <div class="composer" id="composer">
@@ -289,9 +317,10 @@
     <div id="dropOverlay"><div>Отпусти файл</div></div>
   </main>
 
+  <!-- MOBILE NAV -->
   <nav class="mobile-nav" id="mobileNav">
     <button class="mobile-nav-btn on" data-mnav="chats">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/></svg>
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
       <span>Чаты</span>
     </button>
     <button class="mobile-nav-btn" data-mnav="search">
@@ -312,23 +341,24 @@
   </nav>
 </div>
 
-<!-- КОНТЕКСТНЫЕ МЕНЮ -->
+<!-- КОНТЕКСТНОЕ МЕНЮ СООБЩЕНИЯ -->
 <div class="ctx-msg" id="ctxMsg">
   <div class="ctx-emoji" id="ctxEmoji"></div>
-  <button class="ctx-item" data-action="reply"><span class="ico">↩</span><span>Ответить</span></button>
-  <button class="ctx-item" data-action="forward"><span class="ico">↪</span><span>Переслать</span></button>
-  <button class="ctx-item" data-action="copy"><span class="ico">📋</span><span>Копировать</span></button>
-  <button class="ctx-item" data-action="pin"><span class="ico">📌</span><span>Закрепить</span></button>
-  <button class="ctx-item" data-action="edit" data-own-only><span class="ico">✎</span><span>Изменить</span></button>
-  <button class="ctx-item danger" data-action="delete" data-own-only><span class="ico">🗑</span><span>Удалить</span></button>
+  <button class="ctx-item" data-action="reply"><span>Ответить</span><span class="ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></span></button>
+  <button class="ctx-item" data-action="forward"><span>Переслать</span><span class="ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 17 20 12 15 7"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg></span></button>
+  <button class="ctx-item" data-action="copy"><span>Копировать</span><span class="ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span></button>
+  <button class="ctx-item" data-action="pin"><span>Закрепить</span><span class="ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24z"/></svg></span></button>
+  <button class="ctx-item" data-action="edit" data-own-only><span>Изменить</span><span class="ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span></button>
+  <button class="ctx-item danger" data-action="delete" data-own-only><span>Удалить</span><span class="ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span></button>
 </div>
+
 <div class="ctx-msg" id="ctxChat" style="min-width:220px"></div>
 
 <!-- ПАНЕЛЬ НАСТРОЕК -->
 <aside class="panel" id="panel">
   <div class="panel-head">
     <button class="icon-btn" id="panelClose">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
     </button>
     <h2>Настройки</h2>
   </div>
@@ -393,7 +423,7 @@
       <div class="settings-section-title">О приложении</div>
       <div class="settings-card">
         <div class="set-row" style="cursor:default"><div class="set-icon">✦</div><div class="set-body"><div class="set-title">Danumes</div><div class="set-sub">Версия 25</div></div></div>
-        <div class="set-row" id="adminOpenRow" style="display:none"><div class="set-icon" style="background:rgba(139,92,246,0.18);color:#a855f7">🛡</div><div class="set-body"><div class="set-title">Админ-панель</div></div><div class="set-chev">›</div></div>
+        <div class="set-row" id="adminOpenRow" style="display:none"><div class="set-icon" style="background:rgba(99,102,241,0.18);color:#818cf8">🛡</div><div class="set-body"><div class="set-title">Админ-панель</div></div><div class="set-chev">›</div></div>
       </div>
     </div>
   </div>
@@ -402,7 +432,7 @@
 <!-- ЗВОНКИ -->
 <div id="callOverlay">
   <div class="call-header">
-    <div class="ava sm" id="callHeaderAva" style="background:#a855f7">?</div>
+    <div class="ava sm" id="callHeaderAva" style="background:#6366f1">?</div>
     <div class="call-header-info">
       <div class="call-header-name" id="callHeaderName">Звонок</div>
       <div class="call-header-status" id="callHeaderStatus">Соединение…</div>
@@ -411,23 +441,37 @@
   </div>
   <div class="call-videos grid-1" id="callVideos"></div>
   <div class="call-controls">
-    <button class="call-btn" id="callMic">🎤</button>
-    <button class="call-btn" id="callCam">📹</button>
-    <button class="call-btn" id="callScreen">🖥</button>
-    <button class="call-btn" id="callMinimize">⤡</button>
-    <button class="call-btn end" id="callEnd">📞</button>
+    <button class="call-btn" id="callMic">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
+    </button>
+    <button class="call-btn" id="callCam">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="3" ry="3"/></svg>
+    </button>
+    <button class="call-btn" id="callScreen">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    </button>
+    <button class="call-btn" id="callMinimize">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+    </button>
+    <button class="call-btn end" id="callEnd">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" transform="rotate(135 12 12)"/></svg>
+    </button>
   </div>
 </div>
 
 <div id="incomingCall">
-  <div class="ava sm" id="incAva" style="background:#a855f7">?</div>
+  <div class="ava sm" id="incAva" style="background:#6366f1">?</div>
   <div class="incoming-info">
     <div class="incoming-name" id="incName">—</div>
     <div class="incoming-type" id="incType">Входящий звонок</div>
   </div>
   <div class="incoming-actions">
-    <button class="incoming-btn reject" id="incReject">✕</button>
-    <button class="incoming-btn accept" id="incAccept">✓</button>
+    <button class="incoming-btn reject" id="incReject">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <button class="incoming-btn accept" id="incAccept">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+    </button>
   </div>
 </div>
 
@@ -435,15 +479,19 @@
   <video class="mini-video" id="miniVideo" autoplay playsinline muted></video>
   <div class="mini-footer">
     <div class="mini-info"><div class="mini-name" id="miniName">Звонок</div><div class="mini-time" id="miniTime">00:00</div></div>
-    <button class="mini-btn" id="miniExpand">⤢</button>
-    <button class="mini-btn end" id="miniEnd">✕</button>
+    <button class="mini-btn" id="miniExpand">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+    </button>
+    <button class="mini-btn end" id="miniEnd">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
   </div>
 </div>
 
-<!-- МОДАЛКИ (остальные) -->
+<!-- МОДАЛКИ -->
 <div class="modal-bg" id="newChatModal">
   <div class="modal">
-    <div class="modal-head"><h3>Найти человека</h3><button class="icon-btn" id="ncClose">✕</button></div>
+    <div class="modal-head"><h3>Найти человека</h3><button class="icon-btn" id="ncClose"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body left">
       <input class="inp" id="ncSearchInput" placeholder="Введи имя..." />
       <div class="search-results" id="ncResults" style="margin-top:14px; padding:20px; text-align:center; color:var(--text-3); font-size:13px;">Введи имя</div>
@@ -453,7 +501,7 @@
 
 <div class="modal-bg" id="editProfileModal">
   <div class="modal">
-    <div class="modal-head"><h3>Профиль</h3><button class="icon-btn" id="epClose">✕</button></div>
+    <div class="modal-head"><h3>Профиль</h3><button class="icon-btn" id="epClose"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body left">
       <div class="pe-section" style="text-align:center"><div class="ava xxl" id="epAva" style="background:var(--bg-hover); margin:0 auto 14px;">?</div></div>
       <div class="pe-section">
@@ -473,15 +521,13 @@
   </div>
 </div>
 
-<!-- ПРОФИЛЬ ДРУГОГО ПОЛЬЗОВАТЕЛЯ -->
 <div class="modal-bg" id="profileModal">
   <div class="modal">
     <div class="modal-head">
       <h3 id="upTitle">Профиль</h3>
-      <button class="icon-btn" id="upClose">✕</button>
+      <button class="icon-btn" id="upClose"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="modal-body left" id="upBody">
-      <!-- Сюда JS рендерит содержимое профиля -->
       <div class="up-loading">
         <div class="up-spinner"></div>
         <div class="up-loading-text">Загрузка профиля…</div>
@@ -489,10 +535,10 @@
     </div>
   </div>
 </div>
-  
+
 <div class="modal-bg" id="passwordModal">
   <div class="modal">
-    <div class="modal-head"><h3>Смена пароля</h3><button class="icon-btn" id="pwClose">✕</button></div>
+    <div class="modal-head"><h3>Смена пароля</h3><button class="icon-btn" id="pwClose"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body left">
       <div class="err" id="pwErr"></div>
       <div class="p-section">Текущий</div>
@@ -506,14 +552,14 @@
 
 <div class="modal-bg" id="sessionsModal">
   <div class="modal">
-    <div class="modal-head"><h3>Активные сессии</h3><button class="icon-btn" id="ssClose">✕</button></div>
+    <div class="modal-head"><h3>Активные сессии</h3><button class="icon-btn" id="ssClose"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body left" id="ssBody"></div>
   </div>
 </div>
 
 <div class="modal-bg" id="deleteModal">
   <div class="modal">
-    <div class="modal-head"><h3>Удалить аккаунт</h3><button class="icon-btn" id="dlClose">✕</button></div>
+    <div class="modal-head"><h3>Удалить аккаунт</h3><button class="icon-btn" id="dlClose"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body left">
       <div class="err" id="dlErr"></div>
       <p style="color:var(--text-2); margin-bottom:14px;">Это <b style="color:var(--danger)">необратимо</b>.</p>
@@ -525,7 +571,7 @@
 
 <div class="modal-bg" id="emailModal">
   <div class="modal">
-    <div class="modal-head"><h3>Привязать Email</h3><button class="icon-btn" id="emClose">✕</button></div>
+    <div class="modal-head"><h3>Привязать Email</h3><button class="icon-btn" id="emClose"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body left">
       <input class="inp" id="emInput" type="email" placeholder="you@example.com" />
       <button class="btn-grad" id="emSave" style="margin-top:12px;">Сохранить</button>
@@ -535,7 +581,7 @@
 
 <div class="modal-bg" id="phoneModal">
   <div class="modal">
-    <div class="modal-head"><h3>Привязать телефон</h3><button class="icon-btn" id="phClose">✕</button></div>
+    <div class="modal-head"><h3>Привязать телефон</h3><button class="icon-btn" id="phClose"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body left">
       <input class="inp" id="phInput" type="tel" placeholder="+7 900 000-00-00" />
       <button class="btn-grad" id="phSave" style="margin-top:12px;">Сохранить</button>
@@ -545,7 +591,7 @@
 
 <div class="modal-bg" id="vkLinkModal">
   <div class="modal">
-    <div class="modal-head"><h3>Привязка VK</h3><button class="icon-btn" id="vkClose">✕</button></div>
+    <div class="modal-head"><h3>Привязка VK</h3><button class="icon-btn" id="vkClose"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body left">
       <div id="vkStep1">
         <p class="modal-note">Отправь боту код:</p>
@@ -570,7 +616,7 @@
 
 <div class="modal-bg" id="contactsModal">
   <div class="modal">
-    <div class="modal-head"><h3>Контакты</h3><button class="icon-btn" id="cntClose">✕</button></div>
+    <div class="modal-head"><h3>Контакты</h3><button class="icon-btn" id="cntClose"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body left">
       <div style="display:flex; gap:8px;">
         <input class="inp" id="cntUsername" placeholder="username" style="flex:1;" />
@@ -584,7 +630,7 @@
 
 <div class="modal-bg" id="stickersModal">
   <div class="modal" style="max-width:560px">
-    <div class="modal-head"><h3>Мои стикеры</h3><button class="icon-btn" id="smClose">✕</button></div>
+    <div class="modal-head"><h3>Мои стикеры</h3><button class="icon-btn" id="smClose"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body left">
       <button class="btn-grad" id="smCreatePack" style="margin-bottom:16px;">+ Создать пак</button>
       <div id="smPacksList"></div>
@@ -594,7 +640,7 @@
 
 <div class="modal-bg" id="createPackModal">
   <div class="modal">
-    <div class="modal-head"><h3>Новый пак</h3><button class="icon-btn" id="cpClose">✕</button></div>
+    <div class="modal-head"><h3>Новый пак</h3><button class="icon-btn" id="cpClose"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body left">
       <div class="p-section">Название</div>
       <input class="inp" id="cpName" maxlength="40" />
@@ -610,7 +656,7 @@
 
 <div class="modal-bg" id="packEditorModal">
   <div class="modal" style="max-width:580px">
-    <div class="modal-head"><h3 id="pePackTitle">Пак</h3><button class="icon-btn" id="peClose">✕</button></div>
+    <div class="modal-head"><h3 id="pePackTitle">Пак</h3><button class="icon-btn" id="peClose"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body left">
       <button class="btn-grad" id="peAddSticker" style="margin-bottom:16px;">Добавить стикер</button>
       <div id="peStickersGrid" class="pack-stickers-grid"></div>
@@ -621,7 +667,7 @@
 
 <div class="modal-bg" id="newGroupModal">
   <div class="modal">
-    <div class="modal-head"><h3>Создать</h3><button class="icon-btn" id="ngClose">✕</button></div>
+    <div class="modal-head"><h3>Создать</h3><button class="icon-btn" id="ngClose"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body left">
       <div class="pe-section">
         <h4>Тип</h4>
@@ -642,13 +688,5 @@
 <div id="imgViewer"><img id="imgViewerImg" src="" /></div>
 
 <script src="/app.js"></script>
-  <!-- Aurora background layers -->
-<div id="aurora" aria-hidden="true">
-  <div class="aurora-blob blob-1"></div>
-  <div class="aurora-blob blob-2"></div>
-  <div class="aurora-blob blob-3"></div>
-  <div class="aurora-blob blob-4"></div>
-  <div class="aurora-grain"></div>
-</div>
 </body>
 </html>
