@@ -2754,5 +2754,53 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 else initAll();
 
 /* ============================================================
+   AURORA PARALLAX — фон переливается при движении мыши
+   ============================================================ */
+(function initAurora() {
+  const aurora = document.getElementById('aurora');
+  if (!aurora) return;
+
+  let targetX = 0, targetY = 0;
+  let currentX = 0, currentY = 0;
+  let rafId = null;
+
+  function onMove(e) {
+    const x = e.clientX / window.innerWidth;
+    const y = e.clientY / window.innerHeight;
+    targetX = (x - 0.5) * 2;   // -1 .. 1
+    targetY = (y - 0.5) * 2;
+    if (!rafId) rafId = requestAnimationFrame(loop);
+  }
+
+  function onTouch(e) {
+    if (!e.touches || !e.touches[0]) return;
+    const t = e.touches[0];
+    const x = t.clientX / window.innerWidth;
+    const y = t.clientY / window.innerHeight;
+    targetX = (x - 0.5) * 2;
+    targetY = (y - 0.5) * 2;
+    if (!rafId) rafId = requestAnimationFrame(loop);
+  }
+
+  function loop() {
+    currentX += (targetX - currentX) * 0.06;
+    currentY += (targetY - currentY) * 0.06;
+
+    aurora.style.setProperty('--mx', currentX.toFixed(4));
+    aurora.style.setProperty('--my', currentY.toFixed(4));
+
+    if (Math.abs(targetX - currentX) > 0.001 || Math.abs(targetY - currentY) > 0.001) {
+      rafId = requestAnimationFrame(loop);
+    } else {
+      rafId = null;
+    }
+  }
+
+  window.addEventListener('mousemove', onMove, { passive: true });
+  window.addEventListener('touchmove', onTouch, { passive: true });
+  window.addEventListener('touchstart', onTouch, { passive: true });
+})();
+
+/* ============================================================
    КОНЕЦ ФАЙЛА app.js
    ============================================================ */
