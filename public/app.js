@@ -2748,6 +2748,7 @@ function initAll() {
   $('upClose') && ($('upClose').onclick = closeUserProfile);
   document.querySelectorAll('.emoji-tabs button').forEach(b => b.onclick = () => renderEmojiTab(b.dataset.emojiTab));
   document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('on'); }));
+     initRailNav();
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initAll);
@@ -2804,11 +2805,10 @@ else initAll();
 /* ============================================================
    RAIL NAVIGATION
    ============================================================ */
-(function initRail() {
+function initRailNav() {
   const railAvatar = document.getElementById('railAvatar');
   const railAvaImg = document.getElementById('railAvaImg');
 
-  // Синхронизируем аватар в rail с my-bar
   function syncRailAva() {
     const src = document.getElementById('myBarAva');
     if (!src || !railAvaImg) return;
@@ -2817,7 +2817,6 @@ else initAll();
     railAvaImg.textContent = src.textContent || '?';
   }
 
-  // Обновляем при changes
   const observer = new MutationObserver(syncRailAva);
   const target = document.getElementById('myBarAva');
   if (target) {
@@ -2825,12 +2824,10 @@ else initAll();
     syncRailAva();
   }
 
-  // Клик по аватару — открыть настройки/профиль
   railAvatar && (railAvatar.onclick = () => {
     document.getElementById('panel')?.classList.add('on');
   });
 
-  // Клик по rail-кнопкам
   document.querySelectorAll('.rail-btn').forEach(btn => {
     btn.onclick = () => {
       const action = btn.dataset.rail;
@@ -2847,7 +2844,6 @@ else initAll();
       } else if (action === 'newchat') {
         document.getElementById('btnNewChat')?.click();
       } else if (action === 'calls') {
-        // Заглушка
         const c = document.getElementById('toasts');
         if (c) {
           const el = document.createElement('div');
@@ -2861,8 +2857,7 @@ else initAll();
       }
     };
   });
-})();
-
+}
 /* ============================================================
    КОНЕЦ ФАЙЛА app.js
    ============================================================ */
