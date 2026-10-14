@@ -2,7 +2,6 @@
    DANUMES · app.js v25 (SlimChat-стиль)
    ============================================================ */
 
-
 const socket = io({
     auth: { token: localStorage.getItem('danumes.token') || '' }
 });
@@ -2802,7 +2801,6 @@ else initAll();
   window.addEventListener('touchmove', onTouch, { passive: true });
   window.addEventListener('touchstart', onTouch, { passive: true });
 })();
-
 
 /* ============================================================
    RAIL NAVIGATION
