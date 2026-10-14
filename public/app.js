@@ -2,6 +2,7 @@
    DANUMES · app.js v25 (SlimChat-стиль)
    ============================================================ */
 
+
 const socket = io({
     auth: { token: localStorage.getItem('danumes.token') || '' }
 });
