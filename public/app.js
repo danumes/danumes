@@ -2802,5 +2802,67 @@ else initAll();
 })();
 
 /* ============================================================
+   RAIL NAVIGATION
+   ============================================================ */
+(function initRail() {
+  const railAvatar = document.getElementById('railAvatar');
+  const railAvaImg = document.getElementById('railAvaImg');
+
+  // Синхронизируем аватар в rail с my-bar
+  function syncRailAva() {
+    const src = document.getElementById('myBarAva');
+    if (!src || !railAvaImg) return;
+    railAvaImg.style.backgroundImage = src.style.backgroundImage || '';
+    railAvaImg.style.background = src.style.background || 'var(--accent)';
+    railAvaImg.textContent = src.textContent || '?';
+  }
+
+  // Обновляем при changes
+  const observer = new MutationObserver(syncRailAva);
+  const target = document.getElementById('myBarAva');
+  if (target) {
+    observer.observe(target, { attributes: true, childList: true, subtree: true, characterData: true });
+    syncRailAva();
+  }
+
+  // Клик по аватару — открыть настройки/профиль
+  railAvatar && (railAvatar.onclick = () => {
+    document.getElementById('panel')?.classList.add('on');
+  });
+
+  // Клик по rail-кнопкам
+  document.querySelectorAll('.rail-btn').forEach(btn => {
+    btn.onclick = () => {
+      const action = btn.dataset.rail;
+      document.querySelectorAll('.rail-btn').forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+
+      if (action === 'chats') {
+        document.body.classList.remove('in-chat');
+        document.getElementById('side')?.classList.remove('hidden');
+        document.getElementById('main')?.classList.remove('on-mobile');
+      } else if (action === 'search') {
+        const s = document.getElementById('searchInput');
+        if (s) { s.focus(); s.select(); }
+      } else if (action === 'newchat') {
+        document.getElementById('btnNewChat')?.click();
+      } else if (action === 'calls') {
+        // Заглушка
+        const c = document.getElementById('toasts');
+        if (c) {
+          const el = document.createElement('div');
+          el.className = 'toast';
+          el.textContent = '📞 Звонки — скоро';
+          c.appendChild(el);
+          setTimeout(() => el.remove(), 2000);
+        }
+      } else if (action === 'settings') {
+        document.getElementById('panel')?.classList.add('on');
+      }
+    };
+  });
+})();
+
+/* ============================================================
    КОНЕЦ ФАЙЛА app.js
    ============================================================ */
