@@ -2870,28 +2870,27 @@ function initRailNav() {
       document.querySelectorAll('.rail-btn').forEach(b => b.classList.remove('on'));
       btn.classList.add('on');
 
-      if (action === 'chats') {
-        document.body.classList.remove('in-chat');
-        document.getElementById('side')?.classList.remove('hidden');
-        document.getElementById('main')?.classList.remove('on-mobile');
-      } else if (action === 'search') {
-        const s = document.getElementById('searchInput');
-        if (s) { s.focus(); s.select(); }
-      } else if (action === 'newchat') {
-  openModal('newChatModal');
-  const inp = document.getElementById('ncSearchInput');
-  const res = document.getElementById('ncResults');
-  if (inp) { inp.value = ''; inp.focus(); }
-  if (res) res.innerHTML = 'Введи имя';
-}
-      } 
-       else if (action === 'settings') {
+            } else if (action === 'newchat') {
+        openModal('newChatModal');
+        const inp = document.getElementById('ncSearchInput');
+        const res = document.getElementById('ncResults');
+        if (inp) { inp.value = ''; inp.focus(); }
+        if (res) res.innerHTML = 'Введи имя';
+      } else if (action === 'calls') {
+        const c = document.getElementById('toasts');
+        if (c) {
+          const el = document.createElement('div');
+          el.className = 'toast';
+          el.textContent = '📞 Звонки — скоро';
+          c.appendChild(el);
+          setTimeout(() => el.remove(), 2000);
+        }
+      } else if (action === 'settings') {
         document.getElementById('panel')?.classList.add('on');
       }
     };
   });
 }
-
 /* ============================================================
    КОНЕЦ ФАЙЛА app.js
    ============================================================ */
