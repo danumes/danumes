@@ -736,6 +736,72 @@
   </div>
 </div>
 
+<!-- ============ ЗАПИСЬ ГС-КАРТОЧКИ ============ -->
+<div class="modal-bg" id="voiceCardModal">
+  <div class="modal modal-voice-card">
+    <div class="modal-head">
+      <h3>Голосовая карточка</h3>
+      <button class="icon-btn" id="vcClose">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body left modal-voice-card-body">
+
+      <!-- Превью карточки -->
+      <div class="vc-preview" id="vcPreview">
+        <div class="vc-preview-cover" id="vcPreviewCover"></div>
+        <div class="vc-preview-body">
+          <div class="vc-preview-title" id="vcPreviewTitle">Без названия</div>
+          <div class="vc-preview-wave">
+            <span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <div class="vc-preview-time" id="vcPreviewTime">0:00</div>
+        </div>
+      </div>
+
+      <!-- Заголовок -->
+      <div class="vc-field">
+        <label class="vc-label">Заголовок</label>
+        <input class="inp" id="vcTitle" maxlength="60" placeholder="Например: Поздравляю!" />
+      </div>
+
+      <!-- Обложка (цвет) -->
+      <div class="vc-field">
+        <label class="vc-label">Обложка</label>
+        <div class="vc-colors" id="vcColors">
+          <button class="vc-color on" data-color="violet" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)"></button>
+          <button class="vc-color" data-color="pink" style="background:linear-gradient(135deg,#ec4899,#f472b6)"></button>
+          <button class="vc-color" data-color="cyan" style="background:linear-gradient(135deg,#06b6d4,#a855f7)"></button>
+          <button class="vc-color" data-color="emerald" style="background:linear-gradient(135deg,#10b981,#06b6d4)"></button>
+          <button class="vc-color" data-color="orange" style="background:linear-gradient(135deg,#f59e0b,#ec4899)"></button>
+          <button class="vc-color" data-color="red" style="background:linear-gradient(135deg,#ef4444,#ec4899)"></button>
+        </div>
+      </div>
+
+      <!-- Транскрипт -->
+      <div class="vc-field">
+        <label class="vc-label">Текст <span class="vc-opt">· необязательно</span></label>
+        <textarea class="inp" id="vcTranscript" maxlength="500" rows="2" placeholder="Что сказано в голосовом?"></textarea>
+      </div>
+
+      <!-- Запись -->
+      <div class="vc-record-area">
+        <button class="vc-record-btn" id="vcRecordBtn">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
+          <span id="vcRecordLabel">Записать</span>
+        </button>
+        <div class="vc-record-time" id="vcRecordTime">0:00</div>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" id="vcCancel">Отмена</button>
+      <button class="btn-grad" id="vcSend" disabled>Отправить</button>
+    </div>
+  </div>
+</div>
+  
 <div class="toasts" id="toasts"></div>
 <div id="imgViewer"><img id="imgViewerImg" src="" /></div>
 
