@@ -1808,6 +1808,21 @@ socket.on('webrtc:ice', data => {
   else { if (!pendingCandidates.has(key)) pendingCandidates.set(key, []); pendingCandidates.get(key).push(data.candidate); }
 });
 
+function attachLocalTracks(pc) {
+  if (!localStream) {
+    console.warn('⚠️ attachLocalTracks: localStream NULL');
+    return;
+  }
+  const tracks = localStream.getTracks();
+  tracks.forEach(t => {
+    const already = pc.getSenders().find(s => s.track === t);
+    if (!already) {
+      console.log('🎤 attachLocalTracks: добавляю', t.kind);
+      pc.addTrack(t, localStream);
+    }
+  });
+}
+
 function createPeerConnection(peer, isCaller, sendOffer = true) {
   const key = keyOf(peer);
   let pc = peerConnections.get(key);
