@@ -19,6 +19,7 @@ const messagesByChat = new Map();
 const unread = new Map();
 const lastMsg = new Map();
 const typingByChat = new Map();
+const presenceByChat = new Map();
 const readBy = new Map();
 const pinned = new Set();
 const muted = new Set();
@@ -167,6 +168,17 @@ function formatChatDate(ts) {
   if (d >= today) return 'Сегодня';
   if (d >= yest) return 'Вчера';
   return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+}
+/* ============================================================
+   СЛЕДЫ — последнее действие пользователя
+   ============================================================ */
+let lastPresenceSent = 0;
+function sendPresence(action) {
+  if (!currentChatId) return;
+  const now = Date.now();
+  if (now - lastPresenceSent < 1500) return; // не чаще 1.5 сек
+  lastPresenceSent = now;
+  socket.emit('presence:update', { chatId: currentChatId, action });
 }
 function toast(text, dur = 2500) {
   const c = $('toasts'); if (!c) return;
@@ -692,6 +704,16 @@ socket.on('message:pin-updated', data => {
   if (data.messageId) pinnedMsgs.set(data.chatId, data.messageId);
   else pinnedMsgs.delete(data.chatId);
   if (currentChatId === data.chatId) updatePinnedBar();
+});
+
+socket.on('presence:update', data => {
+  // data = { chatId, username, action, time }
+  if (!data || !data.chatId) return;
+  if (!presenceByChat.has(data.chatId)) presenceByChat.set(data.chatId, new Map());
+  const m = presenceByChat.get(data.chatId);
+  m.set(keyOf(data.username), { action: data.action, time: data.time || Date.now() });
+  if (currentChatId === data.chatId) updateMainHead();
+  renderChatList();
 });
 
 socket.on('user:typing', data => {
@@ -1329,6 +1351,16 @@ function sendMessage() {
   }
   if (!text && pendingAttachments.length === 0) return;
   if (!currentChatId) return;
+   // Определяем тип действия для "следов"
+if (pendingAttachments.length > 0) {
+  const first = pendingAttachments[0];
+  if (first.type && first.type.startsWith('image/')) sendPresence('photo');
+  else if (first.type && first.type.startsWith('video/')) sendPresence('video');
+  else if (first.type && first.type.startsWith('audio/')) sendPresence('voice');
+  else sendPresence('file');
+} else {
+  sendPresence('text');
+}
   socket.emit('message:send', {
     chatId: currentChatId,
     text: text,
