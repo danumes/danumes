@@ -227,14 +227,22 @@ function initAuth() {
   const expiresAt = parseInt(localStorage.getItem('danumes.tokenExpires') || '0', 10);
   if (savedToken && (!expiresAt || expiresAt > Date.now())) {
     socket.emit('auth:resume', { token: savedToken }, res => {
-      if (res && res.ok) enterApp(res.user);
-      else { localStorage.removeItem('danumes.token'); localStorage.removeItem('danumes.tokenExpires'); }
+      if (res && res.ok) {
+        enterApp(res.user);
+      } else {
+        localStorage.removeItem('danumes.token');
+        localStorage.removeItem('danumes.tokenExpires');
+        hideSplash();
+      }
     });
   } else if (savedToken) {
     localStorage.removeItem('danumes.token');
     localStorage.removeItem('danumes.tokenExpires');
+    hideSplash();
+  } else {
+    hideSplash();
   }
-
+   
   const urlParams = new URLSearchParams(window.location.search);
   const googleToken = urlParams.get('google_login');
   const googleError = urlParams.get('google_error');
