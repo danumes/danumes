@@ -3470,6 +3470,26 @@ function initRailNav() {
     };
   });
 }
+
+/* ============================================================
+   СКРЫТЬ ПЛАШКУ TATNET
+   ============================================================ */
+(function hideTatnetBadge() {
+  function tryHide() {
+    document.querySelectorAll('a, div, span').forEach(el => {
+      const txt = (el.textContent || '').toLowerCase();
+      if (txt.includes('tatnet') && el.children.length <= 2 && txt.length < 60) {
+        el.style.display = 'none';
+        el.style.visibility = 'hidden';
+        el.style.opacity = '0';
+        el.style.pointerEvents = 'none';
+      }
+    });
+  }
+  tryHide();
+  // Проверяем каждые 500 мс — плашка может появляться позже
+  setInterval(tryHide, 500);
+})();
 /* ============================================================
    КОНЕЦ ФАЙЛА app.js
    ============================================================ */
