@@ -146,6 +146,15 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const keyOf = u => String(u || '').toLowerCase();
 
+const VERIFY_SVG = '<svg viewBox="0 0 24 24"><path d="M12 2l2.4 2.4 3.3-.4.6 3.3L21 9l-1.6 2.9L21 15l-2.7 1.7-.6 3.3-3.3-.4L12 22l-2.4-2.4-3.3.4-.6-3.3L3 15l1.6-2.9L3 9l2.7-1.7.6-3.3 3.3.4L12 2zm-1.2 13.2l5.2-5.2-1.4-1.4-3.8 3.8-1.6-1.6-1.4 1.4 3 3z"/></svg>';
+
+function verifyIconsHtml(user) {
+  if (!user) return '';
+  if (user.isAdmin) return '<span class="verify-icon admin">' + VERIFY_SVG + '</span>';
+  if (user.isVerified) return '<span class="verify-icon verified">' + VERIFY_SVG + '</span>';
+  return '';
+}
+
 function plural(n, one, few, many) {
   const m10 = n % 10, m100 = n % 100;
   if (m10 === 1 && m100 !== 11) return one;
