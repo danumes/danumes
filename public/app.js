@@ -169,6 +169,7 @@ function formatChatDate(ts) {
   if (d >= yest) return 'Вчера';
   return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
 }
+
 /* ============================================================
    СЛЕДЫ — последнее действие пользователя
    ============================================================ */
@@ -194,6 +195,26 @@ function verifyIconsHtml(user) {
   if (user.isAdmin) return '<span class="verify-icon admin">' + VERIFY_SVG + '</span>';
   if (user.isVerified) return '<span class="verify-icon verified">' + VERIFY_SVG + '</span>';
   return '';
+}
+
+function formatPresence(action, time) {
+  const t = Date.now() - (time || 0);
+  let when = '';
+  if (t < 30 * 1000) when = 'только что';
+  else if (t < 60 * 1000) when = Math.floor(t / 1000) + ' сек назад';
+  else if (t < 60 * 60 * 1000) when = Math.floor(t / 60000) + ' мин назад';
+  else if (t < 24 * 60 * 60 * 1000) when = Math.floor(t / 3600000) + ' ч назад';
+  else when = 'давно';
+
+  const map = {
+    photo: '📷 отправил фото',
+    video: '🎬 отправил видео',
+    voice: '🎤 записал голосовое',
+    file: '📎 отправил файл',
+    text: '✍️ написал сообщение'
+  };
+  const label = map[action] || '✍️ написал';
+  return label + ' · ' + when;
 }
 
 /* ============================================================
@@ -1120,15 +1141,34 @@ function renderChatList() {
       const d = new Date(last.time);
       timeStr = d.toDateString() === new Date().toDateString() ? formatTime(last.time) : d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
     }
-    let prev = '';
-    if (isTyping) { const t = Array.from(typing.values()); prev = t.length === 1 ? `${esc(t[0])} печатает...` : `${t.length} печатают...`; }
-    else if (last) {
-      if (last.deleted) prev = 'Сообщение удалено';
-      else if (last.callType) prev = last.callType === 'video' ? '📹 Видеозвонок' : '📞 Звонок';
-      else if (last.sticker || last.stickerUrl) prev = '🐱 Стикер';
-      else if (last.attachments?.length) prev = '📎 Вложение';
-      else if (last.text) prev = esc(last.text.slice(0, 50));
+let prev = '';
+if (isTyping) {
+  const t = Array.from(typing.values());
+  prev = t.length === 1 ? `${esc(t[0])} печатает...` : `${t.length} печатают...`;
+} else {
+  // Сначала "след"
+  const pMap = presenceByChat.get(item.id);
+  let shown = false;
+  if (pMap && pMap.size > 0 && item.type === 'private') {
+    const arr = Array.from(pMap.entries())
+      .filter(([k]) => k !== keyOf(me.username))
+      .sort((a, b) => (b[1].time || 0) - (a[1].time || 0));
+    if (arr.length > 0) {
+      const last = arr[0][1];
+      if (Date.now() - last.time < 3 * 60 * 1000) { // свежее 3 минут
+        prev = formatPresence(last.action, last.time);
+        shown = true;
+      }
     }
+  }
+  if (!shown && last) {
+    if (last.deleted) prev = 'Сообщение удалено';
+    else if (last.callType) prev = last.callType === 'video' ? '📹 Видеозвонок' : '📞 Звонок';
+    else if (last.sticker || last.stickerUrl) prev = '🐱 Стикер';
+    else if (last.attachments?.length) prev = '📎 Вложение';
+    else if (last.text) prev = esc(last.text.slice(0, 50));
+  }
+}
     let avaHtml = '';
     if (item.type === 'private' && item.user) {
       const u = item.user;
@@ -1222,11 +1262,34 @@ function updateMainHead() {
       else { avaEl.style.backgroundImage = ''; avaEl.textContent = (meta.user.avatar && /\p{Emoji}/u.test(meta.user.avatar)) ? meta.user.avatar : (meta.user.username[0] || '?').toUpperCase(); avaEl.style.background = meta.user.color || '#a78bfa'; }
     }
     if (nameEl) nameEl.innerHTML = esc(meta.user.username) + verifyIconsHtml(meta.user);
-    if (statusEl) {
-      const t = typingByChat.get(meta.id);
-      if (t && t.size > 0) { statusEl.textContent = 'печатает...'; statusEl.className = 'mh-status typing'; }
-      else { statusEl.textContent = 'в сети'; statusEl.className = 'mh-status on'; }
+   if (statusEl) {
+  const t = typingByChat.get(meta.id);
+  if (t && t.size > 0) {
+    statusEl.textContent = 'печатает...';
+    statusEl.className = 'mh-status typing';
+  } else {
+    // Сначала смотрим "следы"
+    const pMap = presenceByChat.get(meta.id);
+    let shown = false;
+    if (pMap && pMap.size > 0) {
+      const arr = Array.from(pMap.entries())
+        .filter(([k]) => k !== keyOf(me.username))
+        .sort((a, b) => (b[1].time || 0) - (a[1].time || 0));
+      if (arr.length > 0) {
+        const last = arr[0][1];
+        if (Date.now() - last.time < 5 * 60 * 1000) { // только если свежее 5 минут
+          statusEl.textContent = formatPresence(last.action, last.time);
+          statusEl.className = 'mh-status';
+          shown = true;
+        }
+      }
     }
+    if (!shown) {
+      statusEl.textContent = 'в сети';
+      statusEl.className = 'mh-status on';
+    }
+  }
+}
   } else if (meta.group) {
     if (avaEl) {
       if (meta.group.avatarUrl) { avaEl.style.backgroundImage = `url(${meta.group.avatarUrl})`; avaEl.textContent = ''; }
