@@ -672,20 +672,66 @@
 </div>
 
 <div class="modal-bg" id="newGroupModal">
-  <div class="modal">
-    <div class="modal-head"><h3>Создать</h3><button class="icon-btn" id="ngClose"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
-    <div class="modal-body left">
-      <div class="pe-section">
-        <h4>Тип</h4>
-        <div class="group-type-pick">
-          <div class="type-card on" id="ngTypeGroup"><div class="type-icon">👥</div><div class="type-name">Группа</div></div>
-          <div class="type-card" id="ngTypeChannel"><div class="type-icon">📢</div><div class="type-name">Канал</div></div>
+  <div class="modal modal-create">
+    <div class="modal-head">
+      <h3 id="ngTitle">Новая группа</h3>
+      <button class="icon-btn" id="ngClose">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body left modal-create-body">
+
+      <!-- Аватарка + тип -->
+      <div class="ng-top">
+        <button class="ng-avatar" id="ngAvatar" title="Загрузить аватар">
+          <span class="ng-avatar-emoji" id="ngAvatarEmoji">👥</span>
+          <span class="ng-avatar-cam">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="3" ry="3"/></svg>
+          </span>
+        </button>
+
+        <div class="ng-type-tabs">
+          <button class="ng-type-tab on" id="ngTypeGroup" data-type="group">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            Группа
+          </button>
+          <button class="ng-type-tab" id="ngTypeChannel" data-type="channel">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+            Канал
+          </button>
         </div>
       </div>
-      <div class="pe-section"><h4>Название</h4><input class="inp" id="ngName" maxlength="60" /></div>
-      <div class="pe-section"><h4>Описание</h4><textarea class="inp" id="ngDesc" maxlength="200" rows="2"></textarea></div>
-      <div class="pe-section"><h4>Участники <span id="ngCount" style="color:var(--accent);">0</span></h4><div class="member-pick" id="ngMembers"></div></div>
-      <button class="btn-grad" id="ngCreate">Создать</button>
+
+      <!-- Название -->
+      <div class="ng-field">
+        <label class="ng-label">Название</label>
+        <input class="inp ng-input" id="ngName" maxlength="60" placeholder="Например: Друзья" autocomplete="off" />
+      </div>
+
+      <!-- Описание -->
+      <div class="ng-field">
+        <label class="ng-label">Описание <span class="ng-opt">· необязательно</span></label>
+        <textarea class="inp ng-input" id="ngDesc" maxlength="200" rows="2" placeholder="О чём это сообщество?"></textarea>
+      </div>
+
+      <!-- Участники -->
+      <div class="ng-field">
+        <div class="ng-members-head">
+          <label class="ng-label" style="margin:0;">Участники</label>
+          <span class="ng-count" id="ngCount">Выбрано: 0</span>
+        </div>
+        <div class="ng-search-wrap">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="ngSearchInput" placeholder="Поиск по имени…" autocomplete="off" />
+        </div>
+        <div class="member-pick" id="ngMembers"></div>
+      </div>
+
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn-ghost" id="ngCancel">Отмена</button>
+      <button class="btn-grad ng-create-btn" id="ngCreate">Создать</button>
     </div>
   </div>
 </div>
