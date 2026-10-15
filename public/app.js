@@ -1539,7 +1539,7 @@ async function vcSend() {
         isVoiceCard: true,
         title: title,
         transcript: transcript,
-        cover: color,
+        cover: vcSelectedColor,
         duration: dur
       }]
     });
@@ -1560,31 +1560,43 @@ function vcRenderCard(att) {
     cyan:    'linear-gradient(135deg,#06b6d4,#a855f7)',
     emerald: 'linear-gradient(135deg,#10b981,#06b6d4)',
     orange:  'linear-gradient(135deg,#f59e0b,#ec4899)',
-    red:     'linear-gradient(135deg,#ef4444,#ec4899)'
+    red:     'linear-gradient(135deg,#ef4444,#ec4899)',
+    image:   null
   };
-  const coverBg = colorMap[att.cover] || colorMap.violet;
+
+  let bgStyle;
+  if (att.cover && att.cover.startsWith('http')) {
+    bgStyle = `background-image:url(${esc(att.cover)});background-size:cover;background-position:center;`;
+  } else {
+    const grad = colorMap[att.cover] || colorMap.violet;
+    bgStyle = `background:${grad};`;
+  }
+
   const title = esc(att.title || 'Голосовая карточка');
   const transcript = att.transcript ? esc(att.transcript) : '';
   const dur = formatDuration(att.duration || 0);
 
   let wave = '';
-  for (let i = 0; i < 16; i++) {
-    const h = 20 + Math.random() * 80;
+  for (let i = 0; i < 24; i++) {
+    const h = 25 + Math.random() * 75;
     wave += `<span style="height:${h}%"></span>`;
   }
 
-  return `<div class="voice-card" data-voice-card="1">
-    <div class="voice-card-cover" style="background:${coverBg}">
+  return `<div class="voice-card" data-voice-card="1" style="${bgStyle}">
+    <div class="voice-card-title">${title}</div>
+    <div class="voice-card-bottom">
       <div class="voice-card-play">
-        <svg viewBox="0 0 24 24" width="18" height="18"><polygon points="8 5 19 12 8 19" fill="currentColor"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="8 5 19 12 8 19"/></svg>
+      </div>
+      <div class="voice-card-wave-wrap">
+        <div class="voice-card-wave">${wave}</div>
+        <div class="voice-card-meta">
+          <span class="voice-card-icon">🎤 ГС-карточка</span>
+          <span>${dur}</span>
+        </div>
       </div>
     </div>
-    <div class="voice-card-body">
-      <div class="voice-card-title">${title}</div>
-      <div class="voice-card-wave">${wave}</div>
-      <div class="voice-card-meta"><span>🎤 ГС-карточка</span><span>${dur}</span></div>
-      ${transcript ? `<div class="voice-card-transcript">${transcript}</div>` : ''}
-    </div>
+    ${transcript ? `<div class="voice-card-transcript">${transcript}</div>` : ''}
     <audio src="${esc(att.url)}" preload="metadata"></audio>
   </div>`;
 }
@@ -1685,6 +1697,40 @@ $('vcColors') && document.querySelectorAll('#vcColors .vc-color').forEach(c => {
     }
   };
 });
+// Загрузить картинку-обложку
+const vcColors = $('vcColors');
+if (vcColors) {
+  const uploadBtn = document.createElement('button');
+  uploadBtn.className = 'vc-color';
+  uploadBtn.title = 'Загрузить картинку';
+  uploadBtn.style.cssText = 'background:var(--bg-4);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--text-2);';
+  uploadBtn.textContent = '📷';
+  uploadBtn.onclick = () => {
+    const fi = document.createElement('input');
+    fi.type = 'file';
+    fi.accept = 'image/*';
+    fi.onchange = async () => {
+      if (!fi.files[0]) return;
+      const fd = new FormData();
+      fd.append('file', fi.files[0]);
+      try {
+        const r = await fetch('/upload', { method: 'POST', body: fd });
+        const d = await r.json();
+        if (d && d.url) {
+          vcSelectedColor = d.url;
+          document.querySelectorAll('#vcColors .vc-color').forEach(x => x.classList.remove('on'));
+          uploadBtn.classList.add('on');
+          const cover = $('vcPreviewCover');
+          if (cover) {
+            cover.style.background = `url(${d.url}) center/cover`;
+          }
+        }
+      } catch (e) { toast('❌ Ошибка загрузки'); }
+    };
+    fi.click();
+  };
+  vcColors.appendChild(uploadBtn);
+}
 
 /* ============================================================
    EMOJI PANEL
@@ -2835,19 +2881,44 @@ function initImageViewer() {
    ============================================================ */
 function initMessageInteractions() {
   document.addEventListener('click', e => {
-      const vc = e.target.closest('.voice-card');
-  if (vc) {
-    const audio = vc.querySelector('audio');
-    if (audio) {
-      if (audio.paused) {
-        document.querySelectorAll('audio').forEach(a => { if (a !== audio) a.pause(); });
-        audio.play().catch(() => {});
-      } else {
-        audio.pause();
-      }
+     // Анимация волны ГС-карточек
+document.addEventListener('play', e => {
+  const audio = e.target;
+  if (audio.tagName !== 'AUDIO') return;
+  const card = audio.closest('.voice-card');
+  if (!card) return;
+  const bars = card.querySelectorAll('.voice-card-wave span');
+  if (!bars.length) return;
+  audio.ontimeupdate = () => {
+    if (!audio.duration) return;
+    const prog = audio.currentTime / audio.duration;
+    const activeCount = Math.floor(prog * bars.length);
+    bars.forEach((b, i) => b.classList.toggle('on', i < activeCount));
+  };
+}, true);
+
+document.addEventListener('pause', e => {
+  const audio = e.target;
+  if (audio.tagName !== 'AUDIO') return;
+  const card = audio.closest('.voice-card');
+  if (!card) return;
+  // Не сбрасываем волну — оставляем на месте
+}, true);
+      // Клик по ГС-карточке
+const vc = e.target.closest('.voice-card');
+if (vc) {
+  const audio = vc.querySelector('audio');
+  const playBtn = vc.querySelector('.voice-card-play');
+  if (audio) {
+    if (audio.paused) {
+      document.querySelectorAll('audio').forEach(a => { if (a !== audio) a.pause(); });
+      audio.play().catch(() => {});
+    } else {
+      audio.pause();
     }
-    return;
   }
+  return;
+}
     const r = e.target.closest('.reaction');
     if (r) { if (currentChatId) socket.emit('message:react', { chatId: currentChatId, messageId: r.dataset.msgId, emoji: r.dataset.emoji }); return; }
     const po = e.target.closest('[data-poll-opt]');
