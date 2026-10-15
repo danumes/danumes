@@ -527,6 +527,12 @@ function enterApp(user) {
   updateProfileUI();
   updateMyBar();
   renderChatList();
+  hideSplash();
+}
+
+function hideSplash() {
+  const s = document.getElementById('splash');
+  if (s) s.classList.add('hide');
 }
 socket.on('connect', () => {
   const t = localStorage.getItem('danumes.token');
