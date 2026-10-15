@@ -1639,8 +1639,8 @@ async function acceptIncomingCall() {
     renderCallTiles();
 socket.emit('call:accept', { callId: incomingCallData.callId }, res => {
   if (!res || !res.ok) { toast('❌ Не удалось'); cleanupCall(); return; }
-  // Не создаём peer connection сразу — ждём webrtc:offer от звонящего.
-  // Создастся автоматически в обработчике webrtc:offer.
+  // Если pc уже существует (offer пришёл раньше) — добавим треки
+  peerConnections.forEach(pc => attachLocalTracks(pc));
 });
     incomingCallData = null;
   } catch (e) { toast('❌ Ошибка'); rejectIncomingCall(); }
@@ -1787,11 +1787,13 @@ socket.on('webrtc:offer', async data => {
   if (!pc) pc = createPeerConnection(data.fromUsername, false, false);
   try {
     await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+    // Добавляем треки, если их ещё нет
+    attachLocalTracks(pc);
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
     socket.emit('webrtc:answer', { callId: data.callId, toUsername: data.from, answer });
     flushCandidates(data.from);
-  } catch (e) {}
+  } catch (e) { console.error('webrtc:offer error:', e); }
 });
 socket.on('webrtc:answer', async data => {
   const pc = peerConnections.get(keyOf(data.from));
