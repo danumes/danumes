@@ -352,6 +352,55 @@ io.on('connection', socket => {
     } catch (e) { console.error('register', e); cb({ ok: false, error: 'Ошибка сервера' }); }
   });
 
+socket.on('group:create', async ({ name, description, type, members, avatarUrl }, cb) => {
+  try {
+    const me = users.get(socket.id);
+    if (!me) return cb && cb({ ok: false, error: 'not-auth' });
+
+    const gname = String(name || '').trim().slice(0, 60);
+    if (gname.length < 2) return cb && cb({ ok: false, error: 'Название минимум 2 символа' });
+
+    const gtype = type === 'channel' ? 'channel' : 'group';
+    const gid = uid('g');
+
+    await dbRun(
+      `INSERT INTO groups_t (id, name, description, rules, avatar_url, type, owner, color, created_at) VALUES (?, ?, ?, '', ?, ?, ?, ?, ?)`,
+      [gid, gname, String(description || '').slice(0, 200), avatarUrl || null, gtype, me.usernameLower, randColor(), Date.now()]
+    );
+
+    await dbRun('INSERT OR REPLACE INTO group_members (group_id, username, is_admin) VALUES (?, ?, 1)', [gid, me.usernameLower]);
+
+    const sysId = uid('m');
+    await dbRun(
+      `INSERT INTO messages (id, chat_id, type, text, time) VALUES (?, ?, 'system', ?, ?)`,
+      [sysId, gid, me.username + ' создал ' + (gtype === 'channel' ? 'канал' : 'группу'), Date.now()]
+    );
+
+    if (Array.isArray(members)) {
+      for (const m of members) {
+        const k = String(m).toLowerCase().trim();
+        if (!k || k === me.usernameLower) continue;
+        const exists = await dbGet('SELECT 1 FROM accounts WHERE username=?', [k]);
+        if (!exists) continue;
+        await dbRun('INSERT OR REPLACE INTO group_members (group_id, username, is_admin) VALUES (?, ?, 0)', [gid, k]);
+      }
+    }
+
+    const g = await getGroup(gid);
+    if (cb) cb({ ok: true, group: g });
+
+    // Оповещаем всех участников
+    for (const m of (g.members || [])) {
+      emitToUser(m, 'group:created', g);
+    }
+
+    console.log(`👥 group:create ${me.usernameLower} → ${gname} [${gtype}] id=${gid}`);
+  } catch (e) {
+    console.error('group:create', e);
+    if (cb) cb({ ok: false, error: 'server-error' });
+  }
+});
+   
   socket.on('auth:login', async ({ login, password }, cb) => {
     try {
       const raw = String(login || '').trim();
