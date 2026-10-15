@@ -2864,13 +2864,20 @@ function initRailNav() {
     document.getElementById('panel')?.classList.add('on');
   });
 
-  document.querySelectorAll('.rail-btn').forEach(btn => {
+    document.querySelectorAll('.rail-btn').forEach(btn => {
     btn.onclick = () => {
       const action = btn.dataset.rail;
       document.querySelectorAll('.rail-btn').forEach(b => b.classList.remove('on'));
       btn.classList.add('on');
 
-            } else if (action === 'newchat') {
+      if (action === 'chats') {
+        document.body.classList.remove('in-chat');
+        document.getElementById('side')?.classList.remove('hidden');
+        document.getElementById('main')?.classList.remove('on-mobile');
+      } else if (action === 'search') {
+        const s = document.getElementById('searchInput');
+        if (s) { s.focus(); s.select(); }
+      } else if (action === 'newchat') {
         openModal('newChatModal');
         const inp = document.getElementById('ncSearchInput');
         const res = document.getElementById('ncResults');
