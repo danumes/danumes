@@ -1611,10 +1611,16 @@ async function startCall(type) {
       else { $('callHeaderAva').style.backgroundImage = ''; $('callHeaderAva').textContent = (target.username[0] || '?').toUpperCase(); $('callHeaderAva').style.background = target.color || '#a78bfa'; }
     }
     renderCallTiles();
-    socket.emit('call:invite', { chatId: currentChatId, callType: type, withUser: target.username }, res => {
-      if (res && res.ok) currentCall.id = res.callId;
-      else { toast('❌ Не удалось'); cleanupCall(); }
-    });
+   socket.emit('call:invite', { chatId: currentChatId, callType: type, withUser: target.username }, res => {
+  if (res && res.ok) {
+    currentCall.id = res.callId;
+    // Создаём peer connection и шлём offer
+    createPeerConnection(target.username, true);
+  } else {
+    toast('❌ Не удалось');
+    cleanupCall();
+  }
+});
   } catch (e) { toast('❌ Нет доступа к ' + (type === 'video' ? 'камере' : 'микрофону')); cleanupCall(); }
 }
 
@@ -1631,10 +1637,11 @@ async function acceptIncomingCall() {
     if ($('callHeaderStatus')) $('callHeaderStatus').textContent = 'Соединение...';
     currentCall = { id: incomingCallData.callId, peer: keyOf(incomingCallData.from.username), type: incomingCallData.callType, isCaller: false };
     renderCallTiles();
-    socket.emit('call:accept', { callId: incomingCallData.callId }, res => {
-      if (!res || !res.ok) { toast('❌ Не удалось'); cleanupCall(); return; }
-      (res.peers || []).forEach(peer => createPeerConnection(peer.usernameLower, true));
-    });
+socket.emit('call:accept', { callId: incomingCallData.callId }, res => {
+  if (!res || !res.ok) { toast('❌ Не удалось'); cleanupCall(); return; }
+  // Не создаём peer connection сразу — ждём webrtc:offer от звонящего.
+  // Создастся автоматически в обработчике webrtc:offer.
+});
     incomingCallData = null;
   } catch (e) { toast('❌ Ошибка'); rejectIncomingCall(); }
 }
@@ -1756,6 +1763,13 @@ socket.on('call:peers', data => { (data.peers || []).forEach(peer => createPeerC
 socket.on('call:participant-joined', data => { createPeerConnection(data.participant.usernameLower, false); });
 socket.on('call:participant-left', data => { const pc = peerConnections.get(keyOf(data.username)); if (pc) pc.close(); peerConnections.delete(keyOf(data.username)); remoteStreams.delete(keyOf(data.username)); renderCallTiles(); });
 socket.on('call:rejected', () => { toast('📞 Отклонено'); cleanupCall(); });
+socket.on('call:accepted', data => {
+  console.log('✅ call:accepted', data);
+  if (!currentCall) return;
+  if ($('callHeaderStatus')) $('callHeaderStatus').textContent = 'Соединение...';
+  // Пиры — от сервера приходят? Если нет — не делаем ничего,
+  // peer connection уже создан в startCall.
+});
 socket.on('call:ended', () => cleanupCall());
 socket.on('call:cancelled', () => cleanupCall());
 socket.on('webrtc:offer', async data => {
