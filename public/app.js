@@ -1917,26 +1917,101 @@ function stopCircleRecording() {
 /* ============================================================
    ГРУППЫ
    ============================================================ */
+let ngAvatarUrl = null;
+let ngSearchQuery = '';
+
 function initGroups() {
   $('btnNewGroup') && ($('btnNewGroup').onclick = () => {
     ngSelectedType = 'group';
     ngSelectedMembers.clear();
+    ngAvatarUrl = null;
+    ngSearchQuery = '';
     if ($('ngName')) $('ngName').value = '';
     if ($('ngDesc')) $('ngDesc').value = '';
+    if ($('ngSearchInput')) $('ngSearchInput').value = '';
+    const av = $('ngAvatar');
+    if (av) { av.style.backgroundImage = ''; }
+    const em = $('ngAvatarEmoji');
+    if (em) em.textContent = '👥';
+    if ($('ngTitle')) $('ngTitle').textContent = 'Новая группа';
     $('ngTypeGroup')?.classList.add('on');
     $('ngTypeChannel')?.classList.remove('on');
     renderNgMembers();
     updateNgCount();
     openModal('newGroupModal');
   });
+
   $('ngClose') && ($('ngClose').onclick = () => closeModal('newGroupModal'));
-  $('ngTypeGroup') && ($('ngTypeGroup').onclick = () => { ngSelectedType = 'group'; $('ngTypeGroup').classList.add('on'); $('ngTypeChannel')?.classList.remove('on'); });
-  $('ngTypeChannel') && ($('ngTypeChannel').onclick = () => { ngSelectedType = 'channel'; $('ngTypeChannel').classList.add('on'); $('ngTypeGroup')?.classList.remove('on'); });
+  $('ngCancel') && ($('ngCancel').onclick = () => closeModal('newGroupModal'));
+
+  $('ngTypeGroup') && ($('ngTypeGroup').onclick = () => {
+    ngSelectedType = 'group';
+    $('ngTypeGroup').classList.add('on');
+    $('ngTypeChannel')?.classList.remove('on');
+    if ($('ngTitle')) $('ngTitle').textContent = 'Новая группа';
+    if (!ngAvatarUrl) {
+      const em = $('ngAvatarEmoji');
+      if (em) em.textContent = '👥';
+    }
+  });
+
+  $('ngTypeChannel') && ($('ngTypeChannel').onclick = () => {
+    ngSelectedType = 'channel';
+    $('ngTypeChannel').classList.add('on');
+    $('ngTypeGroup')?.classList.remove('on');
+    if ($('ngTitle')) $('ngTitle').textContent = 'Новый канал';
+    if (!ngAvatarUrl) {
+      const em = $('ngAvatarEmoji');
+      if (em) em.textContent = '📢';
+    }
+  });
+
+  // Клик по аватарке — загрузка картинки
+  $('ngAvatar') && ($('ngAvatar').onclick = () => {
+    const fi = document.createElement('input');
+    fi.type = 'file';
+    fi.accept = 'image/*';
+    fi.onchange = async () => {
+      if (!fi.files[0]) return;
+      const fd = new FormData();
+      fd.append('file', fi.files[0]);
+      try {
+        const r = await fetch('/upload', { method: 'POST', body: fd });
+        const d = await r.json();
+        if (d && d.url) {
+          ngAvatarUrl = d.url;
+          const av = $('ngAvatar');
+          if (av) {
+            av.style.backgroundImage = `url(${d.url})`;
+            av.style.backgroundSize = 'cover';
+            av.style.backgroundPosition = 'center';
+          }
+          const em = $('ngAvatarEmoji');
+          if (em) em.textContent = '';
+        }
+      } catch (e) { toast('❌ Ошибка загрузки'); }
+    };
+    fi.click();
+  });
+
+  // Поиск участников
+  $('ngSearchInput') && ($('ngSearchInput').oninput = () => {
+    ngSearchQuery = $('ngSearchInput').value.trim().toLowerCase();
+    renderNgMembers();
+  });
+
+  // Создание
   $('ngCreate') && ($('ngCreate').onclick = () => {
     const name = $('ngName')?.value.trim();
     if (!name || name.length < 2) { toast('❌ Мин 2 символа'); return; }
     $('ngCreate').disabled = true;
-    socket.emit('group:create', { name, description: $('ngDesc')?.value.trim() || '', type: ngSelectedType, members: Array.from(ngSelectedMembers) }, res => {
+    socket.emit('group:create', {
+      name,
+      description: $('ngDesc')?.value.trim() || '',
+      type: ngSelectedType,
+      members: Array.from(ngSelectedMembers),
+      avatarUrl: ngAvatarUrl
+    }, res => {
       $('ngCreate').disabled = false;
       if (res && res.ok) closeModal('newGroupModal');
       else toast('❌ ' + (res?.error || 'Ошибка'));
