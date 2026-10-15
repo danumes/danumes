@@ -93,6 +93,14 @@ let circlePreviewEl = null;
 
 let undoTimer = null;
 
+let vcRecorder = null;
+let vcChunks = [];
+let vcRecording = false;
+let vcTimer = null;
+let vcBlob = null;
+let vcSelectedColor = 'violet';
+let vcDuration = 0;
+
 /* ============================================================
    КОНСТАНТЫ
    ============================================================ */
@@ -913,15 +921,17 @@ function buildMsg(msg, prevMsg) {
   let attachmentsHtml = '';
   if (msg.attachments && msg.attachments.length > 0) {
     attachmentsHtml = '<div class="attachments">';
-    msg.attachments.forEach(att => {
-      const isImage = att.type && att.type.startsWith('image/');
-      const isVideo = att.type && att.type.startsWith('video/');
-      const isAudio = att.type && att.type.startsWith('audio/');
-      if (isImage) attachmentsHtml += `<img class="att-image" src="${esc(att.url)}" />`;
-      else if (isVideo) attachmentsHtml += `<video class="${att.name?.includes('circle') ? 'video-circle' : 'att-image'}" src="${esc(att.url)}" controls playsinline></video>`;
-      else if (isAudio) attachmentsHtml += `<div class="voice-player"><button class="vp-play"></button><div class="vp-wave"></div><span class="vp-time">0:00</span><button class="vp-speed">1x</button><audio src="${esc(att.url)}" preload="metadata"></audio></div>`;
-      else attachmentsHtml += `<a class="att-file" href="${esc(att.url)}" download="${esc(att.name)}" target="_blank"><span class="att-file-icon">📄</span><div class="att-file-info"><div class="att-file-name">${esc(att.name)}</div><div class="att-file-size">${formatFileSize(att.size)}</div></div></a>`;
-    });
+   msg.attachments.forEach(att => {
+  const isImage = att.type && att.type.startsWith('image/');
+  const isVideo = att.type && att.type.startsWith('video/');
+  const isAudio = att.type && att.type.startsWith('audio/');
+  if (att.isVoiceCard) {
+    attachmentsHtml += vcRenderCard(att);
+  } else if (isImage) attachmentsHtml += `<img class="att-image" src="${esc(att.url)}" />`;
+  else if (isVideo) attachmentsHtml += `<video class="${att.name?.includes('circle') ? 'video-circle' : 'att-image'}" src="${esc(att.url)}" controls playsinline></video>`;
+  else if (isAudio) attachmentsHtml += `<div class="voice-player"><button class="vp-play"></button><div class="vp-wave"></div><span class="vp-time">0:00</span><button class="vp-speed">1x</button><audio src="${esc(att.url)}" preload="metadata"></audio></div>`;
+  else attachmentsHtml += `<a class="att-file" href="${esc(att.url)}" download="${esc(att.name)}" target="_blank"><span class="att-file-icon">📄</span><div class="att-file-info"><div class="att-file-name">${esc(att.name)}</div><div class="att-file-size">${formatFileSize(att.size)}</div></div></a>`;
+});
     attachmentsHtml += '</div>';
   }
 
@@ -1404,6 +1414,172 @@ function startEditMessage(msg) {
   toast('✏️ Измени и отправь');
 }
 
+/* ============================================================
+   ГОЛОСОВЫЕ КАРТОЧКИ
+   ============================================================ */
+function openVoiceCardModal() {
+  if (!currentChatId) { toast('❌ Открой чат'); return; }
+  vcBlob = null;
+  vcChunks = [];
+  vcRecording = false;
+  vcSelectedColor = 'violet';
+  vcDuration = 0;
+
+  if ($('vcTitle')) $('vcTitle').value = '';
+  if ($('vcTranscript')) $('vcTranscript').value = '';
+  if ($('vcPreviewTitle')) $('vcPreviewTitle').textContent = 'Без названия';
+  if ($('vcPreviewTime')) $('vcPreviewTime').textContent = '0:00';
+  if ($('vcRecordTime')) $('vcRecordTime').textContent = '0:00';
+  if ($('vcRecordLabel')) $('vcRecordLabel').textContent = 'Записать';
+  if ($('vcRecordBtn')) $('vcRecordBtn').classList.remove('recording');
+  if ($('vcSend')) $('vcSend').disabled = true;
+
+  const cover = $('vcPreviewCover');
+  if (cover) cover.style.background = 'linear-gradient(135deg, #a78bfa, #7c3aed)';
+
+  document.querySelectorAll('#vcColors .vc-color').forEach(c => {
+    c.classList.toggle('on', c.dataset.color === 'violet');
+  });
+
+  openModal('voiceCardModal');
+}
+
+function vcFormatTime(sec) {
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return m + ':' + s.toString().padStart(2, '0');
+}
+
+async function vcStartRecording() {
+  if (vcRecording) {
+    vcStopRecording();
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    vcRecorder = new MediaRecorder(stream);
+    vcChunks = [];
+    const startTime = Date.now();
+
+    vcRecorder.ondataavailable = e => { if (e.data.size > 0) vcChunks.push(e.data); };
+    vcRecorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      vcBlob = new Blob(vcChunks, { type: 'audio/webm' });
+      vcDuration = Math.floor((Date.now() - startTime) / 1000);
+      if ($('vcPreviewTime')) $('vcPreviewTime').textContent = vcFormatTime(vcDuration);
+      if ($('vcSend')) $('vcSend').disabled = vcBlob.size < 500;
+    };
+
+    vcRecorder.start();
+    vcRecording = true;
+    if ($('vcRecordBtn')) $('vcRecordBtn').classList.add('recording');
+    if ($('vcRecordLabel')) $('vcRecordLabel').textContent = 'Стоп';
+
+    vcTimer = setInterval(() => {
+      const s = Math.floor((Date.now() - startTime) / 1000);
+      if ($('vcRecordTime')) $('vcRecordTime').textContent = vcFormatTime(s);
+      if (s >= 120) vcStopRecording();
+    }, 200);
+  } catch (e) {
+    toast('❌ Нет доступа к микрофону');
+  }
+}
+
+function vcStopRecording() {
+  if (vcRecorder && vcRecorder.state !== 'inactive') vcRecorder.stop();
+  vcRecording = false;
+  if (vcTimer) { clearInterval(vcTimer); vcTimer = null; }
+  if ($('vcRecordBtn')) $('vcRecordBtn').classList.remove('recording');
+  if ($('vcRecordLabel')) $('vcRecordLabel').textContent = 'Записать';
+}
+
+async function vcSend() {
+  if (!vcBlob || vcBlob.size < 500) { toast('❌ Сначала запиши'); return; }
+  if (!currentChatId) return;
+
+  const title = $('vcTitle')?.value.trim() || 'Без названия';
+  const transcript = $('vcTranscript')?.value.trim() || '';
+  const color = vcSelectedColor;
+
+  $('vcSend').disabled = true;
+  $('vcSend').textContent = 'Загрузка...';
+
+  const fd = new FormData();
+  fd.append('file', vcBlob, 'voicecard.webm');
+
+  try {
+    const r = await fetch('/upload', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (!d || !d.url) { toast('❌ Ошибка загрузки'); return; }
+
+    const audio = new Audio(d.url);
+    await new Promise((resolve) => {
+      audio.addEventListener('loadedmetadata', () => resolve(), { once: true });
+      setTimeout(resolve, 1500);
+    });
+    const dur = Math.floor(audio.duration) || vcDuration || 0;
+
+    socket.emit('message:send', {
+      chatId: currentChatId,
+      text: '',
+      attachments: [{
+        url: d.url,
+        name: 'voicecard.webm',
+        size: vcBlob.size,
+        type: 'audio/webm',
+        isVoiceCard: true,
+        title: title,
+        transcript: transcript,
+        cover: color,
+        duration: dur
+      }]
+    });
+
+    closeModal('voiceCardModal');
+  } catch (e) {
+    toast('❌ Ошибка');
+  } finally {
+    $('vcSend').disabled = false;
+    $('vcSend').textContent = 'Отправить';
+  }
+}
+
+function vcRenderCard(att) {
+  const colorMap = {
+    violet:  'linear-gradient(135deg,#a78bfa,#7c3aed)',
+    pink:    'linear-gradient(135deg,#ec4899,#f472b6)',
+    cyan:    'linear-gradient(135deg,#06b6d4,#a855f7)',
+    emerald: 'linear-gradient(135deg,#10b981,#06b6d4)',
+    orange:  'linear-gradient(135deg,#f59e0b,#ec4899)',
+    red:     'linear-gradient(135deg,#ef4444,#ec4899)'
+  };
+  const coverBg = colorMap[att.cover] || colorMap.violet;
+  const title = esc(att.title || 'Голосовая карточка');
+  const transcript = att.transcript ? esc(att.transcript) : '';
+  const dur = formatDuration(att.duration || 0);
+
+  let wave = '';
+  for (let i = 0; i < 16; i++) {
+    const h = 20 + Math.random() * 80;
+    wave += `<span style="height:${h}%"></span>`;
+  }
+
+  return `<div class="voice-card" data-voice-card="1">
+    <div class="voice-card-cover" style="background:${coverBg}">
+      <div class="voice-card-play">
+        <svg viewBox="0 0 24 24" width="18" height="18"><polygon points="8 5 19 12 8 19" fill="currentColor"/></svg>
+      </div>
+    </div>
+    <div class="voice-card-body">
+      <div class="voice-card-title">${title}</div>
+      <div class="voice-card-wave">${wave}</div>
+      <div class="voice-card-meta"><span>🎤 ГС-карточка</span><span>${dur}</span></div>
+      ${transcript ? `<div class="voice-card-transcript">${transcript}</div>` : ''}
+    </div>
+    <audio src="${esc(att.url)}" preload="metadata"></audio>
+  </div>`;
+}
+
 function initComposer() {
   const input = $('input'); if (!input) return;
   input.addEventListener('input', () => {
@@ -1439,6 +1615,14 @@ function initComposer() {
     voiceBtn.addEventListener('touchstart', e => { e.preventDefault(); startVoiceOrCircle(); }, { passive: false });
     voiceBtn.addEventListener('touchend', e => { e.preventDefault(); stopVoiceOrCircle(); });
   }
+   // ГС-карточка: двойной клик по кнопке голосового
+const voiceBtn2 = $('btnVoice');
+if (voiceBtn2) {
+  voiceBtn2.addEventListener('dblclick', e => {
+    e.preventDefault();
+    openVoiceCardModal();
+  });
+}
   const emojiBtn = $('btnEmoji');
   if (emojiBtn) emojiBtn.onclick = e => {
     e.stopPropagation();
@@ -1462,6 +1646,36 @@ function initComposer() {
     if (mid) socket.emit('message:pin', { chatId: currentChatId, messageId: mid });
   });
 }
+// Кнопки ГС-карточки
+$('vcClose') && ($('vcClose').onclick = () => closeModal('voiceCardModal'));
+$('vcCancel') && ($('vcCancel').onclick = () => closeModal('voiceCardModal'));
+$('vcRecordBtn') && ($('vcRecordBtn').onclick = vcStartRecording);
+$('vcSend') && ($('vcSend').onclick = vcSend);
+
+$('vcTitle') && ($('vcTitle').oninput = () => {
+  const t = $('vcTitle').value.trim() || 'Без названия';
+  if ($('vcPreviewTitle')) $('vcPreviewTitle').textContent = t;
+});
+
+$('vcColors') && document.querySelectorAll('#vcColors .vc-color').forEach(c => {
+  c.onclick = () => {
+    vcSelectedColor = c.dataset.color;
+    document.querySelectorAll('#vcColors .vc-color').forEach(x => x.classList.remove('on'));
+    c.classList.add('on');
+    const cover = $('vcPreviewCover');
+    if (cover) {
+      const colorMap = {
+        violet:  'linear-gradient(135deg,#a78bfa,#7c3aed)',
+        pink:    'linear-gradient(135deg,#ec4899,#f472b6)',
+        cyan:    'linear-gradient(135deg,#06b6d4,#a855f7)',
+        emerald: 'linear-gradient(135deg,#10b981,#06b6d4)',
+        orange:  'linear-gradient(135deg,#f59e0b,#ec4899)',
+        red:     'linear-gradient(135deg,#ef4444,#ec4899)'
+      };
+      cover.style.background = colorMap[c.dataset.color] || colorMap.violet;
+    }
+  };
+});
 
 /* ============================================================
    EMOJI PANEL
@@ -2612,6 +2826,19 @@ function initImageViewer() {
    ============================================================ */
 function initMessageInteractions() {
   document.addEventListener('click', e => {
+      const vc = e.target.closest('.voice-card');
+  if (vc) {
+    const audio = vc.querySelector('audio');
+    if (audio) {
+      if (audio.paused) {
+        document.querySelectorAll('audio').forEach(a => { if (a !== audio) a.pause(); });
+        audio.play().catch(() => {});
+      } else {
+        audio.pause();
+      }
+    }
+    return;
+  }
     const r = e.target.closest('.reaction');
     if (r) { if (currentChatId) socket.emit('message:react', { chatId: currentChatId, messageId: r.dataset.msgId, emoji: r.dataset.emoji }); return; }
     const po = e.target.closest('[data-poll-opt]');
