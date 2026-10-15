@@ -106,7 +106,8 @@ const RTC_CONFIG = {
 
 const DEFAULT_SETTINGS = {
   theme: 'dark', accent: 'violet', sound: true, notifications: true,
-  wallpaper: null, minimalMode: false, liveBg: false, vibration: true
+  wallpaper: null, minimalMode: false, liveBg: false, vibration: true,
+  liveReactions: true
 };
 let settings = Object.assign({}, DEFAULT_SETTINGS, JSON.parse(localStorage.getItem('danumes.settings') || '{}'));
 
@@ -639,6 +640,24 @@ socket.on('message', msg => {
 socket.on('message:updated', msg => {
   const arr = messagesByChat.get(msg.chatId) || [];
   const i = arr.findIndex(m => m.id === msg.id);
+  const oldMsg = i >= 0 ? arr[i] : null;
+
+  // Ловим новые реакции для "живых реакций"
+  if (oldMsg && msg.reactions) {
+    const oldReactions = oldMsg.reactions || {};
+    const newReactions = msg.reactions || {};
+    Object.keys(newReactions).forEach(emoji => {
+      const oldArr = oldReactions[emoji] || [];
+      const newArr = newReactions[emoji] || [];
+      // Если стало больше — кто-то поставил эту реакцию
+      if (newArr.length > oldArr.length) {
+        const diff = newArr.length - oldArr.length;
+        for (let k = 0; k < Math.min(diff, 3); k++) {
+          spawnLiveReaction(emoji);
+        }
+      }
+    });
+  }
   if (me && msg.deletedFor && msg.deletedFor.indexOf(me.usernameLower) !== -1) {
     if (i >= 0) arr.splice(i, 1);
     const el = $('msgs')?.querySelector(`[data-id="${msg.id}"]`);
@@ -1516,6 +1535,53 @@ function sendGif(url) {
 }
 
 /* ============================================================
+   ЖИВЫЕ РЕАКЦИИ
+   ============================================================ */
+function getLiveReactionsLayer() {
+  const cv = $('chatView');
+  if (!cv) return null;
+  let layer = cv.querySelector('.live-reactions-layer');
+  if (!layer) {
+    layer = document.createElement('div');
+    layer.className = 'live-reactions-layer';
+    cv.appendChild(layer);
+  }
+  return layer;
+}
+
+function spawnLiveReaction(emoji) {
+  if (!settings.liveReactions) return;
+  if (document.body.classList.contains('minimal-mode')) return;
+  const layer = getLiveReactionsLayer();
+  if (!layer) return;
+
+  const el = document.createElement('div');
+  el.className = 'live-reaction';
+  el.textContent = emoji;
+
+  // Случайная позиция по горизонтали (10% – 90%)
+  const left = 10 + Math.random() * 80;
+  el.style.left = left + '%';
+
+  // Случайный размер (32–52 px)
+  const size = 32 + Math.random() * 20;
+  el.style.fontSize = size + 'px';
+
+  // Случайная задержка старта (0–400 мс)
+  const delay = Math.random() * 400;
+  el.style.animationDelay = delay + 'ms';
+
+  // Случайное отклонение по горизонтали для разнообразия
+  const drift = (Math.random() - 0.5) * 60;
+  el.style.setProperty('--drift', drift + 'px');
+
+  layer.appendChild(el);
+
+  // Удаляем после завершения анимации
+  setTimeout(() => { try { el.remove(); } catch (e) {} }, 3200 + delay);
+}
+
+/* ============================================================
    CONTEXT MENU
    ============================================================ */
 function showCtxMsg(x, y, msg) {
@@ -1524,15 +1590,16 @@ function showCtxMsg(x, y, msg) {
   const em = $('ctxEmoji');
   if (em) {
     em.innerHTML = '';
-    CTX_EMOJI.forEach(e => {
-      const b = document.createElement('button');
-      b.textContent = e;
-      b.onclick = () => {
-        socket.emit('message:react', { chatId: msg.chatId, messageId: msg.id, emoji: e });
-        hideCtxMsg();
-      };
-      em.appendChild(b);
-    });
+CTX_EMOJI.forEach(e => {
+  const b = document.createElement('button');
+  b.textContent = e;
+  b.onclick = () => {
+    socket.emit('message:react', { chatId: msg.chatId, messageId: msg.id, emoji: e });
+    spawnLiveReaction(e); // ← мгновенно показываем свою реакцию
+    hideCtxMsg();
+  };
+  em.appendChild(b);
+});
   }
   const isOwn = me && keyOf(msg.userId) === keyOf(me.username);
   menu.querySelectorAll('[data-own-only]').forEach(el => el.style.display = isOwn ? 'flex' : 'none');
