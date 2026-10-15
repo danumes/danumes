@@ -1686,12 +1686,22 @@ function renderCallTiles() {
     html += `<div class="call-tile" data-peer="${esc(peer)}"><video id="remoteVideo-${esc(peer)}" autoplay playsinline></video><div class="call-tile-label">${esc(u ? u.username : peer)}</div></div>`;
   });
   c.innerHTML = html;
-  const lv = $('localVideo');
-  if (lv && localStream) { lv.srcObject = localStream; lv.muted = true; lv.play().catch(() => {}); }
-  remoteStreams.forEach((stream, peer) => {
-    const el = $(`remoteVideo-${peer}`);
-    if (el) { el.srcObject = stream; el.play().catch(() => {}); }
-  });
+const lv = $('localVideo');
+if (lv && localStream) { lv.srcObject = localStream; lv.muted = true; lv.play().catch(() => {}); }
+remoteStreams.forEach((stream, peer) => {
+  const el = $(`remoteVideo-${peer}`);
+  if (el) {
+    el.srcObject = stream;
+    el.muted = false;
+    el.volume = 1.0;
+    el.play().catch(err => {
+      console.warn('play error:', err);
+      // Если autoplay заблокирован — играем после первого клика
+      const resume = () => { el.play().catch(() => {}); document.removeEventListener('click', resume); };
+      document.addEventListener('click', resume, { once: true });
+    });
+  }
+});
 }
 
 function toggleMic() {
