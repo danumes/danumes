@@ -1629,13 +1629,49 @@ function initComposer() {
     fi.onchange = () => { if (fi.files.length) uploadFiles(fi.files); fi.value = ''; };
   }
   const voiceBtn = $('btnVoice');
-  if (voiceBtn) {
-    voiceBtn.addEventListener('mousedown', e => { e.preventDefault(); startVoiceOrCircle(); });
-    voiceBtn.addEventListener('mouseup', () => stopVoiceOrCircle());
-    voiceBtn.addEventListener('mouseleave', () => stopVoiceOrCircle());
-    voiceBtn.addEventListener('touchstart', e => { e.preventDefault(); startVoiceOrCircle(); }, { passive: false });
-    voiceBtn.addEventListener('touchend', e => { e.preventDefault(); stopVoiceOrCircle(); });
-  }
+if (voiceBtn) {
+  let voiceClickTimer = null;
+  let voiceLongPress = false;
+  let voiceRecordingStarted = false;
+
+  // Двойной клик — открыть модалку ГС-карточки
+  voiceBtn.addEventListener('dblclick', e => {
+    e.preventDefault();
+    if (voiceClickTimer) { clearTimeout(voiceClickTimer); voiceClickTimer = null; }
+    if (voiceRecordingStarted) {
+      stopVoiceOrCircle();
+      voiceRecordingStarted = false;
+    }
+    openVoiceCardModal();
+  });
+
+  // Одиночный клик — обычное голосовое
+  voiceBtn.addEventListener('click', e => {
+    e.preventDefault();
+    if (voiceClickTimer) clearTimeout(voiceClickTimer);
+    voiceClickTimer = setTimeout(() => {
+      voiceClickTimer = null;
+      // Одиночный клик: записываем голосовое
+      startVoiceOrCircle();
+      voiceRecordingStarted = true;
+      // Через 3 секунды максимум — стоп
+      setTimeout(() => {
+        if (voiceRecordingStarted) {
+          stopVoiceOrCircle();
+          voiceRecordingStarted = false;
+        }
+      }, 60000);
+    }, 280); // ждём 280 мс — если за это время придёт второй клик, это dblclick
+  });
+
+  // Останавливаем запись, когда отпускаем кнопку мыши (для одиночного клика)
+  document.addEventListener('click', e => {
+    if (voiceRecordingStarted && e.target !== voiceBtn && !voiceBtn.contains(e.target)) {
+      stopVoiceOrCircle();
+      voiceRecordingStarted = false;
+    }
+  });
+}
    // ГС-карточка: двойной клик по кнопке голосового
 const voiceBtn2 = $('btnVoice');
 if (voiceBtn2) {
