@@ -19,7 +19,6 @@ const messagesByChat = new Map();
 const unread = new Map();
 const lastMsg = new Map();
 const typingByChat = new Map();
-const presenceByChat = new Map();
 const readBy = new Map();
 const pinned = new Set();
 const muted = new Set();
@@ -168,53 +167,6 @@ function formatChatDate(ts) {
   if (d >= today) return 'Сегодня';
   if (d >= yest) return 'Вчера';
   return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-}
-
-/* ============================================================
-   СЛЕДЫ — последнее действие пользователя
-   ============================================================ */
-let lastPresenceSent = 0;
-function sendPresence(action) {
-  if (!currentChatId) return;
-  const now = Date.now();
-  if (now - lastPresenceSent < 1500) return; // не чаще 1.5 сек
-  lastPresenceSent = now;
-  socket.emit('presence:update', { chatId: currentChatId, action });
-}
-function toast(text, dur = 2500) {
-  const c = $('toasts'); if (!c) return;
-  const el = document.createElement('div');
-  el.className = 'toast'; el.textContent = text;
-  c.appendChild(el);
-  setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 250); }, dur);
-}
-
-const VERIFY_SVG = '<svg viewBox="0 0 24 24"><path d="M12 2l2.4 2.4 3.3-.4.6 3.3L21 9l-1.6 2.9L21 15l-2.7 1.7-.6 3.3-3.3-.4L12 22l-2.4-2.4-3.3.4-.6-3.3L3 15l1.6-2.9L3 9l2.7-1.7.6-3.3 3.3.4L12 2zm-1.2 13.2l5.2-5.2-1.4-1.4-3.8 3.8-1.6-1.6-1.4 1.4 3 3z"/></svg>';
-function verifyIconsHtml(user) {
-  if (!user) return '';
-  if (user.isAdmin) return '<span class="verify-icon admin">' + VERIFY_SVG + '</span>';
-  if (user.isVerified) return '<span class="verify-icon verified">' + VERIFY_SVG + '</span>';
-  return '';
-}
-
-function formatPresence(action, time) {
-  const t = Date.now() - (time || 0);
-  let when = '';
-  if (t < 30 * 1000) when = 'только что';
-  else if (t < 60 * 1000) when = Math.floor(t / 1000) + ' сек назад';
-  else if (t < 60 * 60 * 1000) when = Math.floor(t / 60000) + ' мин назад';
-  else if (t < 24 * 60 * 60 * 1000) when = Math.floor(t / 3600000) + ' ч назад';
-  else when = 'давно';
-
-  const map = {
-    photo: '📷 отправил фото',
-    video: '🎬 отправил видео',
-    voice: '🎤 записал голосовое',
-    file: '📎 отправил файл',
-    text: '✍️ написал сообщение'
-  };
-  const label = map[action] || '✍️ написал';
-  return label + ' · ' + when;
 }
 
 /* ============================================================
@@ -727,16 +679,6 @@ socket.on('message:pin-updated', data => {
   if (currentChatId === data.chatId) updatePinnedBar();
 });
 
-socket.on('presence:update', data => {
-  // data = { chatId, username, action, time }
-  if (!data || !data.chatId) return;
-  if (!presenceByChat.has(data.chatId)) presenceByChat.set(data.chatId, new Map());
-  const m = presenceByChat.get(data.chatId);
-  m.set(keyOf(data.username), { action: data.action, time: data.time || Date.now() });
-  if (currentChatId === data.chatId) updateMainHead();
-  renderChatList();
-});
-
 socket.on('user:typing', data => {
   if (!typingByChat.has(data.chatId)) typingByChat.set(data.chatId, new Map());
   const m = typingByChat.get(data.chatId);
@@ -1142,32 +1084,13 @@ function renderChatList() {
       timeStr = d.toDateString() === new Date().toDateString() ? formatTime(last.time) : d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
     }
 let prev = '';
-if (isTyping) {
-  const t = Array.from(typing.values());
-  prev = t.length === 1 ? `${esc(t[0])} печатает...` : `${t.length} печатают...`;
-} else {
-  // Сначала "след"
-  const pMap = presenceByChat.get(item.id);
-  let shown = false;
-  if (pMap && pMap.size > 0 && item.type === 'private') {
-    const arr = Array.from(pMap.entries())
-      .filter(([k]) => k !== keyOf(me.username))
-      .sort((a, b) => (b[1].time || 0) - (a[1].time || 0));
-    if (arr.length > 0) {
-      const last = arr[0][1];
-      if (Date.now() - last.time < 3 * 60 * 1000) { // свежее 3 минут
-        prev = formatPresence(last.action, last.time);
-        shown = true;
-      }
-    }
-  }
-  if (!shown && last) {
-    if (last.deleted) prev = 'Сообщение удалено';
-    else if (last.callType) prev = last.callType === 'video' ? '📹 Видеозвонок' : '📞 Звонок';
-    else if (last.sticker || last.stickerUrl) prev = '🐱 Стикер';
-    else if (last.attachments?.length) prev = '📎 Вложение';
-    else if (last.text) prev = esc(last.text.slice(0, 50));
-  }
+if (isTyping) { const t = Array.from(typing.values()); prev = t.length === 1 ? `${esc(t[0])} печатает...` : `${t.length} печатают...`; }
+else if (last) {
+  if (last.deleted) prev = 'Сообщение удалено';
+  else if (last.callType) prev = last.callType === 'video' ? '📹 Видеозвонок' : '📞 Звонок';
+  else if (last.sticker || last.stickerUrl) prev = '🐱 Стикер';
+  else if (last.attachments?.length) prev = '📎 Вложение';
+  else if (last.text) prev = esc(last.text.slice(0, 50));
 }
     let avaHtml = '';
     if (item.type === 'private' && item.user) {
@@ -1262,33 +1185,10 @@ function updateMainHead() {
       else { avaEl.style.backgroundImage = ''; avaEl.textContent = (meta.user.avatar && /\p{Emoji}/u.test(meta.user.avatar)) ? meta.user.avatar : (meta.user.username[0] || '?').toUpperCase(); avaEl.style.background = meta.user.color || '#a78bfa'; }
     }
     if (nameEl) nameEl.innerHTML = esc(meta.user.username) + verifyIconsHtml(meta.user);
-   if (statusEl) {
+  if (statusEl) {
   const t = typingByChat.get(meta.id);
-  if (t && t.size > 0) {
-    statusEl.textContent = 'печатает...';
-    statusEl.className = 'mh-status typing';
-  } else {
-    // Сначала смотрим "следы"
-    const pMap = presenceByChat.get(meta.id);
-    let shown = false;
-    if (pMap && pMap.size > 0) {
-      const arr = Array.from(pMap.entries())
-        .filter(([k]) => k !== keyOf(me.username))
-        .sort((a, b) => (b[1].time || 0) - (a[1].time || 0));
-      if (arr.length > 0) {
-        const last = arr[0][1];
-        if (Date.now() - last.time < 5 * 60 * 1000) { // только если свежее 5 минут
-          statusEl.textContent = formatPresence(last.action, last.time);
-          statusEl.className = 'mh-status';
-          shown = true;
-        }
-      }
-    }
-    if (!shown) {
-      statusEl.textContent = 'в сети';
-      statusEl.className = 'mh-status on';
-    }
-  }
+  if (t && t.size > 0) { statusEl.textContent = 'печатает...'; statusEl.className = 'mh-status typing'; }
+  else { statusEl.textContent = 'в сети'; statusEl.className = 'mh-status on'; }
 }
   } else if (meta.group) {
     if (avaEl) {
@@ -1422,7 +1322,6 @@ if (pendingAttachments.length > 0) {
   else if (first.type && first.type.startsWith('audio/')) sendPresence('voice');
   else sendPresence('file');
 } else {
-  sendPresence('text');
 }
   socket.emit('message:send', {
     chatId: currentChatId,
