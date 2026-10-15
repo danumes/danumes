@@ -2800,7 +2800,7 @@ function initAurora() {
   window.addEventListener('mousemove', onMove, { passive: true });
   window.addEventListener('touchmove', onTouch, { passive: true });
   window.addEventListener('touchstart', onTouch, { passive: true });
-})();
+}
 
 /* ============================================================
    RAIL NAVIGATION
