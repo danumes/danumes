@@ -2884,7 +2884,8 @@ function initRailNav() {
   if (inp) { inp.value = ''; inp.focus(); }
   if (res) res.innerHTML = 'Введи имя';
 }
-      } else if (action === 'settings') {
+      } 
+       else if (action === 'settings') {
         document.getElementById('panel')?.classList.add('on');
       }
     };
