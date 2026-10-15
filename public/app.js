@@ -2005,17 +2005,25 @@ function initGroups() {
     const name = $('ngName')?.value.trim();
     if (!name || name.length < 2) { toast('❌ Мин 2 символа'); return; }
     $('ngCreate').disabled = true;
-    socket.emit('group:create', {
-      name,
-      description: $('ngDesc')?.value.trim() || '',
-      type: ngSelectedType,
-      members: Array.from(ngSelectedMembers),
-      avatarUrl: ngAvatarUrl
-    }, res => {
-      $('ngCreate').disabled = false;
-      if (res && res.ok) closeModal('newGroupModal');
-      else toast('❌ ' + (res?.error || 'Ошибка'));
-    });
+   console.log('🟡 Отправляю group:create:', {
+  name,
+  description: $('ngDesc')?.value.trim() || '',
+  type: ngSelectedType,
+  members: Array.from(ngSelectedMembers),
+  avatarUrl: ngAvatarUrl
+});
+socket.emit('group:create', {
+  name,
+  description: $('ngDesc')?.value.trim() || '',
+  type: ngSelectedType,
+  members: Array.from(ngSelectedMembers),
+  avatarUrl: ngAvatarUrl
+}, res => {
+  console.log('🟢 Ответ от сервера:', res);
+  $('ngCreate').disabled = false;
+  if (res && res.ok) closeModal('newGroupModal');
+  else toast('❌ ' + (res?.error || 'Ошибка'));
+});
   });
 }
 function renderNgMembers() {
