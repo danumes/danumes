@@ -1795,8 +1795,9 @@ socket.on('webrtc:offer', async data => {
 });
 socket.on('webrtc:answer', async data => {
   const pc = peerConnections.get(keyOf(data.from));
+  console.log('📥 Получил webrtc:answer от', data.from, 'pc=', !!pc, 'state=', pc?.signalingState);
   if (pc && pc.signalingState === 'have-local-offer') {
-    try { await pc.setRemoteDescription(new RTCSessionDescription(data.answer)); flushCandidates(data.from); startCallTimer(); } catch (e) {}
+    try { await pc.setRemoteDescription(new RTCSessionDescription(data.answer)); flushCandidates(data.from); startCallTimer(); console.log('✅ Answer применён'); } catch (e) { console.error('❌ setRemoteDescription:', e); }
   }
 });
 socket.on('webrtc:ice', data => {
@@ -1814,17 +1815,26 @@ function createPeerConnection(peer, isCaller, sendOffer = true) {
   if (localStream) localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
   pc.onicecandidate = e => { if (e.candidate && currentCall) socket.emit('webrtc:ice', { callId: currentCall.id, toUsername: peer, candidate: e.candidate }); };
 pc.ontrack = e => {
-  console.log('ontrack:', e.track.kind, 'streams:', e.streams.length);
+  console.log('🎵 ontrack:', e.track.kind, 'streams:', e.streams.length);
   remoteStreams.set(key, e.streams[0]);
   renderCallTiles();
   startCallTimer();
 };
   pc.onconnectionstatechange = () => { if (pc.connectionState === 'connected') startCallTimer(); };
-  if (isCaller && sendOffer && currentCall && currentCall.id) {
-    (async () => {
-      try { const offer = await pc.createOffer(); await pc.setLocalDescription(offer); socket.emit('webrtc:offer', { callId: currentCall.id, toUsername: peer, offer }); } catch (e) {}
-    })();
-  }
+if (isCaller && sendOffer && currentCall && currentCall.id) {
+  (async () => {
+    try {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      console.log('📤 Отправляю webrtc:offer на', peer, 'callId:', currentCall.id);
+      socket.emit('webrtc:offer', { callId: currentCall.id, toUsername: peer, offer });
+    } catch (e) {
+      console.error('❌ createOffer ERROR:', e);
+    }
+  })();
+} else {
+  console.warn('⚠️ createPeerConnection: не отправляю offer. isCaller=', isCaller, 'sendOffer=', sendOffer, 'currentCall=', !!currentCall, 'currentCall.id=', currentCall?.id);
+}
   return pc;
 }
 function flushCandidates(peer) {
