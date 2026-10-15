@@ -2394,7 +2394,152 @@ body.minimal-mode .live-reaction {
   padding: 20px;
 }
 
-/* Превью карточки */
+/* === КАРТОЧКА В ЧАТЕ === */
+.voice-card {
+  position: relative;
+  display: block;
+  width: 340px;
+  max-width: 100%;
+  min-height: 180px;
+  padding: 16px;
+  border-radius: 20px;
+  overflow: hidden;
+  cursor: pointer;
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  color: #fff;
+}
+
+.voice-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+/* Затемнение поверх обложки для читаемости текста */
+.voice-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.35) 100%);
+  z-index: 1;
+}
+
+/* Заголовок сверху */
+.voice-card-title {
+  position: relative;
+  z-index: 2;
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* Нижняя часть: кнопка play + волна */
+.voice-card-bottom {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.voice-card-play {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: #fff;
+  color: #1b1b1b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s ease;
+}
+
+.voice-card:hover .voice-card-play {
+  transform: scale(1.05);
+}
+
+.voice-card-play svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Волна и время */
+.voice-card-wave-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.voice-card-wave {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 24px;
+  margin-bottom: 4px;
+}
+
+.voice-card-wave span {
+  flex: 1;
+  max-width: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.5);
+  transition: background 0.15s ease;
+}
+
+.voice-card-wave span.on {
+  background: #fff;
+}
+
+.voice-card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.voice-card-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Транскрипт под волной */
+.voice-card-transcript {
+  position: relative;
+  z-index: 2;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.95);
+  line-height: 1.4;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.voice-card audio {
+  display: none;
+}
+
+/* === МОДАЛКА: ПРЕВЬЮ, ЦВЕТА, ЗАПИСЬ === */
 .vc-preview {
   display: flex;
   gap: 14px;
@@ -2488,7 +2633,6 @@ body.minimal-mode .live-reaction {
   font-weight: 500;
 }
 
-/* Поля */
 .vc-field {
   margin-bottom: 18px;
 }
@@ -2510,7 +2654,6 @@ body.minimal-mode .live-reaction {
   letter-spacing: 0;
 }
 
-/* Цвета */
 .vc-colors {
   display: flex;
   gap: 8px;
@@ -2536,7 +2679,6 @@ body.minimal-mode .live-reaction {
   transform: scale(1.08);
 }
 
-/* Запись */
 .vc-record-area {
   display: flex;
   align-items: center;
@@ -2584,156 +2726,13 @@ body.minimal-mode .live-reaction {
   font-variant-numeric: tabular-nums;
 }
 
-/* Карточка в сообщении */
-.voice-card {
-  display: flex;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 14px;
-  background: rgba(0, 0, 0, 0.2);
-  max-width: 340px;
-  min-width: 260px;
-  align-items: center;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.msg.own .voice-card {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.voice-card:hover {
-  background: rgba(0, 0, 0, 0.3);
-}
-
-.msg.own .voice-card:hover {
-  background: rgba(255, 255, 255, 0.28);
-}
-
-.voice-card-cover {
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
-  flex-shrink: 0;
-  background-size: cover;
-  background-position: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 22px;
-  position: relative;
-}
-
-.voice-card-cover::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 12px;
-  background: rgba(0, 0, 0, 0.15);
-}
-
-.voice-card-play {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  z-index: 2;
-}
-
-.voice-card-play svg {
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
-}
-
-.voice-card-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.voice-card-title {
-  font-size: 13.5px;
-  font-weight: 700;
-  margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--text);
-}
-
-.msg.own .voice-card-title {
-  color: #fff;
-}
-
-.voice-card-wave {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  height: 16px;
-  margin-bottom: 3px;
-}
-
-.voice-card-wave span {
-  flex: 1;
-  max-width: 3px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.3);
-}
-
-.msg:not(.own) .voice-card-wave span {
-  background: rgba(0, 0, 0, 0.2);
-}
-
-.voice-card-wave span.on {
-  background: var(--accent);
-}
-
-.msg.own .voice-card-wave span.on {
-  background: #fff;
-}
-
-.voice-card-meta {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  color: var(--text-2);
-}
-
-.msg.own .voice-card-meta {
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.voice-card-transcript {
-  font-size: 12px;
-  color: var(--text-2);
-  margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.msg:not(.own) .voice-card-transcript {
-  border-top-color: var(--border);
-}
-
-.msg.own .voice-card-transcript {
-  color: rgba(255, 255, 255, 0.9);
-  border-top-color: rgba(255, 255, 255, 0.2);
-}
-
-/* Мобильная адаптация */
 @media (max-width: 800px) {
   .modal-voice-card-body {
     padding: 16px;
   }
   .voice-card {
-    max-width: 100%;
-    min-width: 0;
+    width: 100%;
+    min-height: 160px;
   }
   .vc-color {
     width: 40px;
