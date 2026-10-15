@@ -2416,13 +2416,49 @@ function initSearch() {
     searchQuery = input.value.trim();
     if (clear) clear.classList.toggle('on', searchQuery.length > 0);
     renderChatList();
+    renderGlobalSearchResults(searchQuery);
   });
-  if (clear) clear.onclick = () => { if (input) input.value = ''; searchQuery = ''; clear.classList.remove('on'); renderChatList(); };
+  if (clear) clear.onclick = () => {
+    if (input) input.value = '';
+    searchQuery = '';
+    clear.classList.remove('on');
+    renderChatList();
+    renderGlobalSearchResults('');
+  };
   document.querySelectorAll('.tab').forEach(tab => tab.onclick = () => {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
     tab.classList.add('on');
     currentTab = tab.dataset.tab;
     renderChatList();
+  });
+}
+
+function renderGlobalSearchResults(query) {
+  const c = $('chatList');
+  if (!c) return;
+  if (!query || query.length < 2) return;
+  socket.emit('users:search', { query }, list => {
+    const users = Array.isArray(list) ? list : [];
+    const meKey = me ? keyOf(me.username) : '';
+    const found = users.filter(u => u && keyOf(u.username) !== meKey);
+    if (found.length === 0) return;
+    let html = '<div style="padding:8px 12px 6px;font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px;">Люди</div>';
+    found.slice(0, 10).forEach(u => {
+      let ava = '';
+      if (u.avatarUrl) ava = `<div class="ava sm" style="background-image:url(${esc(u.avatarUrl)})"></div>`;
+      else if (u.avatar && /\p{Emoji}/u.test(u.avatar)) ava = `<div class="ava sm" style="background:${u.color || '#a78bfa'}">${u.avatar}</div>`;
+      else ava = `<div class="ava sm" style="background:${u.color || '#a78bfa'}">${(u.username[0] || '?').toUpperCase()}</div>`;
+      html += `<div class="chat-item" data-username="${esc(u.username)}" style="cursor:pointer;">${ava}<div class="ci-body"><div class="ci-name">${esc(u.username)}${verifyIconsHtml(u)}</div><div class="ci-prev">${u.bio ? esc(u.bio.slice(0, 40)) : 'Нажми, чтобы начать'}</div></div></div>`;
+    });
+    c.innerHTML += html;
+    c.querySelectorAll('.chat-item[data-username]').forEach(el => {
+      el.onclick = () => {
+        socket.emit('chat:open', { withUsername: el.dataset.username });
+        if (input) input.value = '';
+        searchQuery = '';
+        if (clear) clear.classList.remove('on');
+      };
+    });
   });
 }
 
@@ -2842,16 +2878,12 @@ function initRailNav() {
         const s = document.getElementById('searchInput');
         if (s) { s.focus(); s.select(); }
       } else if (action === 'newchat') {
-        document.getElementById('btnNewChat')?.click();
-      } else if (action === 'calls') {
-        const c = document.getElementById('toasts');
-        if (c) {
-          const el = document.createElement('div');
-          el.className = 'toast';
-          el.textContent = '📞 Звонки — скоро';
-          c.appendChild(el);
-          setTimeout(() => el.remove(), 2000);
-        }
+  openModal('newChatModal');
+  const inp = document.getElementById('ncSearchInput');
+  const res = document.getElementById('ncResults');
+  if (inp) { inp.value = ''; inp.focus(); }
+  if (res) res.innerHTML = 'Введи имя';
+}
       } else if (action === 'settings') {
         document.getElementById('panel')?.classList.add('on');
       }
