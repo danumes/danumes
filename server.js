@@ -719,34 +719,6 @@ if (!clean && (!attachments || attachments.length === 0) && !sticker && !sticker
     }
   });
 
-socket.on('presence:update', async ({ chatId, action }) => {
-  try {
-    const me = users.get(socket.id);
-    if (!me) return;
-    if (!chatId || !action) return;
-
-    const payload = {
-      chatId,
-      username: me.usernameLower,
-      action: String(action).slice(0, 20),
-      time: Date.now()
-    };
-
-    if (chatId.startsWith('g_')) {
-      const members = await getGroupMembers(chatId);
-      members.forEach(m => {
-        if (m !== me.usernameLower) emitToUser(m, 'presence:update', payload);
-      });
-    } else {
-      const [a, b] = chatId.split('::');
-      const peer = a === me.usernameLower ? b : a;
-      emitToUser(peer, 'presence:update', payload);
-    }
-  } catch (e) {
-    console.error('presence:update', e);
-  }
-});
-   
   socket.on('typing', async ({ chatId, isTyping }) => {
     const me = users.get(socket.id); if (!me) return;
     if (chatId.startsWith('g_')) {
