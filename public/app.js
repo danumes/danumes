@@ -3472,23 +3472,53 @@ function initRailNav() {
 }
 
 /* ============================================================
-   СКРЫТЬ ПЛАШКУ TATNET
+   СКРЫТЬ ПЛАШКУ TATNET (настойчиво)
    ============================================================ */
-(function hideTatnetBadge() {
-  function tryHide() {
-    document.querySelectorAll('a, div, span').forEach(el => {
-      const txt = (el.textContent || '').toLowerCase();
-      if (txt.includes('tatnet') && el.children.length <= 2 && txt.length < 60) {
-        el.style.display = 'none';
-        el.style.visibility = 'hidden';
-        el.style.opacity = '0';
-        el.style.pointerEvents = 'none';
+(function killTatnetBadge() {
+  function isTatnet(el) {
+    if (!el || !el.textContent) return false;
+    const t = el.textContent.toLowerCase().trim();
+    if (t.length > 60) return false;
+    if (!t.includes('tatnet')) return false;
+    // Ищем минимальный элемент — не body, не html
+    if (el.tagName === 'BODY' || el.tagName === 'HTML') return false;
+    return true;
+  }
+
+  function hideAll() {
+    document.querySelectorAll('*').forEach(el => {
+      if (isTatnet(el)) {
+        // Проверяем — не родитель ли это чего-то важного
+        if (el.querySelector('input, textarea, button[data-rail], #app, #auth')) return;
+        el.style.setProperty('display', 'none', 'important');
+        el.style.setProperty('visibility', 'hidden', 'important');
+        el.style.setProperty('opacity', '0', 'important');
+        el.style.setProperty('pointer-events', 'none', 'important');
+        el.setAttribute('data-tatnet-hidden', '1');
+      }
+    });
+    // Ещё: плашка может быть position:fixed и висеть вне потока
+    document.querySelectorAll('a[target="_blank"], a[href*="tatnet"]').forEach(a => {
+      const rect = a.getBoundingClientRect();
+      if (rect.bottom > window.innerHeight - 120 && rect.right > window.innerWidth - 250) {
+        a.style.setProperty('display', 'none', 'important');
       }
     });
   }
-  tryHide();
-  // Проверяем каждые 500 мс — плашка может появляться позже
-  setInterval(tryHide, 500);
+
+  hideAll();
+  setInterval(hideAll, 300);
+
+  // MutationObserver — реагирует мгновенно
+  const obs = new MutationObserver(hideAll);
+  obs.observe(document.documentElement, { childList: true, subtree: true });
+
+  // Перехват window.open на tatnet
+  const origOpen = window.open;
+  window.open = function(url, ...args) {
+    if (typeof url === 'string' && url.includes('tatnet')) return null;
+    return origOpen.call(this, url, ...args);
+  };
 })();
 /* ============================================================
    КОНЕЦ ФАЙЛА app.js
