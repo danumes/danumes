@@ -2740,6 +2740,18 @@ body.minimal-mode .live-reaction {
   }
 }
 
+/* Скрыть плашку TatNet */
+[class*="tatnet"],
+[id*="tatnet"],
+[class*="badge"],
+a[href*="tatnet.ru"],
+div[style*="tatnet.ru"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 /* ============================================================
    КОНЕЦ
    ============================================================ */
