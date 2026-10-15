@@ -2757,7 +2757,7 @@ else initAll();
 /* ============================================================
    AURORA PARALLAX — фон переливается при движении мыши
    ============================================================ */
-(function initAurora() {
+function initAurora() {
   const aurora = document.getElementById('aurora');
   if (!aurora) return;
 
@@ -2801,6 +2801,63 @@ else initAll();
   window.addEventListener('touchmove', onTouch, { passive: true });
   window.addEventListener('touchstart', onTouch, { passive: true });
 })();
+
+/* ============================================================
+   RAIL NAVIGATION
+   ============================================================ */
+function initRailNav() {
+  const railAvatar = document.getElementById('railAvatar');
+  const railAvaImg = document.getElementById('railAvaImg');
+
+  function syncRailAva() {
+    const src = document.getElementById('myBarAva');
+    if (!src || !railAvaImg) return;
+    railAvaImg.style.backgroundImage = src.style.backgroundImage || '';
+    railAvaImg.style.background = src.style.background || 'var(--accent)';
+    railAvaImg.textContent = src.textContent || '?';
+  }
+
+  const observer = new MutationObserver(syncRailAva);
+  const target = document.getElementById('myBarAva');
+  if (target) {
+    observer.observe(target, { attributes: true, childList: true, subtree: true, characterData: true });
+    syncRailAva();
+  }
+
+  railAvatar && (railAvatar.onclick = () => {
+    document.getElementById('panel')?.classList.add('on');
+  });
+
+  document.querySelectorAll('.rail-btn').forEach(btn => {
+    btn.onclick = () => {
+      const action = btn.dataset.rail;
+      document.querySelectorAll('.rail-btn').forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+
+      if (action === 'chats') {
+        document.body.classList.remove('in-chat');
+        document.getElementById('side')?.classList.remove('hidden');
+        document.getElementById('main')?.classList.remove('on-mobile');
+      } else if (action === 'search') {
+        const s = document.getElementById('searchInput');
+        if (s) { s.focus(); s.select(); }
+      } else if (action === 'newchat') {
+        document.getElementById('btnNewChat')?.click();
+      } else if (action === 'calls') {
+        const c = document.getElementById('toasts');
+        if (c) {
+          const el = document.createElement('div');
+          el.className = 'toast';
+          el.textContent = '📞 Звонки — скоро';
+          c.appendChild(el);
+          setTimeout(() => el.remove(), 2000);
+        }
+      } else if (action === 'settings') {
+        document.getElementById('panel')?.classList.add('on');
+      }
+    };
+  });
+}
 
 /* ============================================================
    КОНЕЦ ФАЙЛА app.js
