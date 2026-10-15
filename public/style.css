@@ -2333,5 +2333,56 @@ body.night-mode { filter: brightness(0.92); }
 }
 
 /* ============================================================
+   ЖИВЫЕ РЕАКЦИИ — эмодзи летят по экрану
+   ============================================================ */
+.live-reactions-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 5;
+}
+
+.live-reaction {
+  position: absolute;
+  bottom: -60px;
+  font-size: 40px;
+  line-height: 1;
+  user-select: none;
+  pointer-events: none;
+  will-change: transform, opacity;
+  animation: liveReactionFly 2.6s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
+}
+
+@keyframes liveReactionFly {
+  0% {
+    transform: translateY(0) scale(0.6) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(-40px) scale(1.1) rotate(-6deg);
+  }
+  50% {
+    transform: translateY(-45vh) scale(1) rotate(8deg);
+    opacity: 1;
+  }
+  90% {
+    opacity: 0.8;
+    transform: translateY(-80vh) scale(1.05) rotate(-4deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-100vh) scale(1.2) rotate(0deg);
+  }
+}
+
+/* Если включён минимализм — отключаем живые реакции */
+body.minimal-mode .live-reaction {
+  display: none;
+}
+
+/* ============================================================
    КОНЕЦ
    ============================================================ */
