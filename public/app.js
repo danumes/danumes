@@ -1813,7 +1813,12 @@ function createPeerConnection(peer, isCaller, sendOffer = true) {
   peerConnections.set(key, pc);
   if (localStream) localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
   pc.onicecandidate = e => { if (e.candidate && currentCall) socket.emit('webrtc:ice', { callId: currentCall.id, toUsername: peer, candidate: e.candidate }); };
-  pc.ontrack = e => { remoteStreams.set(key, e.streams[0]); renderCallTiles(); startCallTimer(); };
+pc.ontrack = e => {
+  console.log('ontrack:', e.track.kind, 'streams:', e.streams.length);
+  remoteStreams.set(key, e.streams[0]);
+  renderCallTiles();
+  startCallTimer();
+};
   pc.onconnectionstatechange = () => { if (pc.connectionState === 'connected') startCallTimer(); };
   if (isCaller && sendOffer && currentCall && currentCall.id) {
     (async () => {
