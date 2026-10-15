@@ -1829,19 +1829,7 @@ function createPeerConnection(peer, isCaller, sendOffer = true) {
   if (pc) return pc;
   pc = new RTCPeerConnection(RTC_CONFIG);
   peerConnections.set(key, pc);
-if (localStream) {
-  const tracks = localStream.getTracks();
-  console.log('🎤 createPeerConnection: localStream есть, треков:', tracks.length, tracks.map(t => t.kind + '/readyState=' + t.readyState));
-  tracks.forEach(t => {
-    if (t.readyState === 'live') {
-      pc.addTrack(t, localStream);
-    } else {
-      console.warn('⚠️ Пропускаю мёртвый трек:', t.kind, t.readyState);
-    }
-  });
-} else {
-  console.warn('⚠️ createPeerConnection: localStream NULL');
-}
+attachLocalTracks(pc);
   pc.onicecandidate = e => { if (e.candidate && currentCall) socket.emit('webrtc:ice', { callId: currentCall.id, toUsername: peer, candidate: e.candidate }); };
 pc.ontrack = e => {
   console.log('🎵 ontrack:', e.track.kind, 'streams:', e.streams.length);
