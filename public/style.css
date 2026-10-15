@@ -2003,5 +2003,335 @@ body.night-mode { filter: brightness(0.92); }
 }
 
 /* ============================================================
+   МОДАЛКА СОЗДАНИЯ ГРУППЫ / КАНАЛА
+   ============================================================ */
+.modal-create {
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  max-height: 92vh;
+  overflow: hidden;
+}
+
+.modal-create .modal-head {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.modal-create .modal-head h3 {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.modal-create-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Верхний блок: аватар + табы */
+.ng-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.ng-avatar {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: var(--bg-3);
+  border: 2px solid var(--border-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: border-color var(--t), background var(--t), transform var(--t);
+  background-size: cover;
+  background-position: center;
+}
+
+.ng-avatar:hover {
+  border-color: var(--accent);
+  background-color: var(--bg-4);
+  transform: scale(1.03);
+}
+
+.ng-avatar-emoji {
+  font-size: 32px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.ng-avatar-cam {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--bg-2);
+  pointer-events: none;
+}
+
+.ng-type-tabs {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+  background: var(--bg-3);
+  padding: 4px;
+  border-radius: var(--r-md);
+}
+
+.ng-type-tab {
+  flex: 1;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all var(--t);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.ng-type-tab:hover {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+
+.ng-type-tab.on {
+  background: var(--bg-2);
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+
+.ng-type-tab.on svg {
+  color: var(--accent);
+}
+
+/* Поля */
+.ng-field {
+  margin-bottom: 18px;
+}
+
+.ng-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.ng-label .ng-opt {
+  text-transform: none;
+  color: var(--text-3);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.ng-input {
+  margin-bottom: 0 !important;
+}
+
+/* Участники */
+.ng-members-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.ng-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  padding: 3px 10px;
+  border-radius: var(--r-full);
+  background: var(--accent-soft);
+}
+
+.ng-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  background: var(--bg-3);
+  border: 1px solid transparent;
+  margin-bottom: 10px;
+  transition: border-color var(--t), background var(--t);
+}
+
+.ng-search-wrap:focus-within {
+  border-color: var(--accent);
+  background: var(--bg-4);
+}
+
+.ng-search-wrap svg {
+  color: var(--text-2);
+  flex-shrink: 0;
+}
+
+.ng-search-wrap input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.ng-search-wrap input::placeholder {
+  color: var(--text-3);
+}
+
+/* Чипы участников */
+.modal-create .member-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.modal-create .member-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background var(--t);
+  width: 100%;
+  text-align: left;
+}
+
+.modal-create .member-chip:hover {
+  background: var(--bg-hover);
+}
+
+.modal-create .member-chip.on {
+  background: var(--accent-soft);
+}
+
+.modal-create .member-chip .ava {
+  width: 34px;
+  height: 34px;
+  font-size: 13px;
+}
+
+.modal-create .member-chip .check {
+  margin-left: auto;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.modal-create .member-chip:not(.on) .check {
+  display: none;
+}
+
+.modal-create .member-chip:not(.on)::after {
+  content: '';
+  margin-left: auto;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border-2);
+  flex-shrink: 0;
+}
+
+/* Футер модалки */
+.modal-foot {
+  display: flex;
+  gap: 8px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--bg-2);
+}
+
+.modal-foot .btn-ghost {
+  flex: 1;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ng-create-btn {
+  flex: 2;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 0 !important;
+  background: var(--accent);
+  box-shadow: 0 4px 14px rgba(236, 72, 153, 0.25);
+  transition: all var(--t);
+}
+
+.ng-create-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(236, 72, 153, 0.35);
+}
+
+.ng-create-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Мобильная адаптация */
+@media (max-width: 800px) {
+  .modal-create .modal-body {
+    padding: 16px;
+  }
+  .ng-avatar {
+    width: 64px;
+    height: 64px;
+  }
+  .ng-avatar-emoji {
+    font-size: 26px;
+  }
+  .ng-type-tab {
+    font-size: 12.5px;
+    padding: 8px 8px;
+  }
+}
+
+/* ============================================================
    КОНЕЦ
    ============================================================ */
