@@ -1221,14 +1221,14 @@ function closeChat() {
 function updateChannelUI() {
   const joinEl = $('channelJoin');
   const footerEl = $('channelFooter');
-  const composerEl = $('composer');
+  const composerWrapEl = $('composer-wrap');
 
-  if (!joinEl || !footerEl || !composerEl) return;
+  if (!joinEl || !footerEl || !composerWrapEl) return;
 
   // По умолчанию — всё скрыто, композер показан
   joinEl.style.display = 'none';
   footerEl.style.display = 'none';
-  composerEl.style.display = 'flex';
+  composerWrapEl.style.display = 'block';
 
   if (!currentChatMeta) return;
 
@@ -1243,29 +1243,24 @@ function updateChannelUI() {
   const isAdmin = g.owner === myKey || (g.admins || []).map(a => keyOf(a)).includes(myKey);
 
   if (!isMember) {
-    // Не подписан — кнопка «Присоединиться», композер скрыт
     joinEl.style.display = 'flex';
-    composerEl.style.display = 'none';
+    composerWrapEl.style.display = 'none';
   } else if (!isAdmin) {
-    // Подписан, но не админ — панель снизу, композер скрыт
     footerEl.style.display = 'flex';
-    composerEl.style.display = 'none';
+    composerWrapEl.style.display = 'none';
 
-    // Обновляем текст и иконку «Звук»
     const muted = muted.has(currentChatMeta.id);
     const label = $('channelMuteLabel');
     const btn = $('channelMuteBtn');
     if (label) label.textContent = muted ? 'Без звука' : 'Звук';
     if (btn) btn.classList.toggle('off', muted);
 
-    // Обновляем текст инфо
     const infoEl = $('channelFooterInfo');
     if (infoEl) {
       const n = (g.members || []).length;
       infoEl.textContent = n + ' ' + plural(n, 'подписчик', 'подписчика', 'подписчиков');
     }
   }
-  // Если админ — композер остаётся, всё остальное скрыто
 }
 
 function updateMainHead() {
@@ -3438,20 +3433,66 @@ function renderGlobalSearchResults(query) {
   const c = $('chatList');
   if (!c) return;
   if (!query || query.length < 2) return;
+  const q = query.toLowerCase();
+
+  // 1. Ищем пользователей через сокет
   socket.emit('users:search', { query }, list => {
     const users = Array.isArray(list) ? list : [];
     const meKey = me ? keyOf(me.username) : '';
-    const found = users.filter(u => u && keyOf(u.username) !== meKey);
-    if (found.length === 0) return;
-    let html = '<div style="padding:8px 12px 6px;font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px;">Люди</div>';
-    found.slice(0, 10).forEach(u => {
-      let ava = '';
-      if (u.avatarUrl) ava = `<div class="ava sm" style="background-image:url(${esc(u.avatarUrl)})"></div>`;
-      else if (u.avatar && /\p{Emoji}/u.test(u.avatar)) ava = `<div class="ava sm" style="background:${u.color || '#a78bfa'}">${u.avatar}</div>`;
-      else ava = `<div class="ava sm" style="background:${u.color || '#a78bfa'}">${(u.username[0] || '?').toUpperCase()}</div>`;
-      html += `<div class="chat-item" data-username="${esc(u.username)}" style="cursor:pointer;">${ava}<div class="ci-body"><div class="ci-name">${esc(u.username)}${verifyIconsHtml(u)}</div><div class="ci-prev">${u.bio ? esc(u.bio.slice(0, 40)) : 'Нажми, чтобы начать'}</div></div></div>`;
+    const foundUsers = users.filter(u => u && keyOf(u.username) !== meKey);
+
+    // 2. Ищем каналы и группы — локально, по уже загруженным
+    const foundGroups = [];
+    groups.forEach(g => {
+      const name = (g.name || '').toLowerCase();
+      const desc = (g.description || '').toLowerCase();
+      if (name.includes(q) || desc.includes(q)) {
+        foundGroups.push(g);
+      }
     });
+
+    if (foundUsers.length === 0 && foundGroups.length === 0) return;
+
+    let html = '';
+
+    // Каналы/группы — выше
+    if (foundGroups.length > 0) {
+      html += '<div style="padding:8px 12px 6px;font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px;">Каналы и группы</div>';
+      foundGroups.slice(0, 10).forEach(g => {
+        const n = (g.members || []).length;
+        const isChannel = g.type === 'channel';
+        let avaHtml = '';
+        if (g.avatarUrl) avaHtml = `<div class="ava sm" style="background-image:url(${esc(g.avatarUrl)})"></div>`;
+        else avaHtml = `<div class="ava sm" style="background:${g.color || '#a78bfa'}">${isChannel ? '📢' : '👥'}</div>`;
+        html += `<div class="chat-item" data-group-id="${esc(g.id)}" style="cursor:pointer;">${avaHtml}<div class="ci-body"><div class="ci-name">${esc(g.name)}</div><div class="ci-prev">${n} ${plural(n, 'участник', 'участника', 'участников')}${g.description ? ' · ' + esc(g.description.slice(0, 30)) : ''}</div></div></div>`;
+      });
+    }
+
+    // Пользователи — ниже
+    if (foundUsers.length > 0) {
+      html += '<div style="padding:8px 12px 6px;font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px;">Люди</div>';
+      foundUsers.slice(0, 10).forEach(u => {
+        let ava = '';
+        if (u.avatarUrl) ava = `<div class="ava sm" style="background-image:url(${esc(u.avatarUrl)})"></div>`;
+        else if (u.avatar && /\p{Emoji}/u.test(u.avatar)) ava = `<div class="ava sm" style="background:${u.color || '#a78bfa'}">${u.avatar}</div>`;
+        else ava = `<div class="ava sm" style="background:${u.color || '#a78bfa'}">${(u.username[0] || '?').toUpperCase()}</div>`;
+        html += `<div class="chat-item" data-username="${esc(u.username)}" style="cursor:pointer;">${ava}<div class="ci-body"><div class="ci-name">${esc(u.username)}${verifyIconsHtml(u)}</div><div class="ci-prev">${u.bio ? esc(u.bio.slice(0, 40)) : 'Нажми, чтобы начать'}</div></div></div>`;
+      });
+    }
+
     c.innerHTML += html;
+
+    // Обработчики — для групп
+    c.querySelectorAll('.chat-item[data-group-id]').forEach(el => {
+      el.onclick = () => {
+        socket.emit('chat:openGroup', { groupId: el.dataset.groupId });
+        if (input) input.value = '';
+        searchQuery = '';
+        if (clear) clear.classList.remove('on');
+      };
+    });
+
+    // Обработчики — для пользователей
     c.querySelectorAll('.chat-item[data-username]').forEach(el => {
       el.onclick = () => {
         socket.emit('chat:open', { withUsername: el.dataset.username });
