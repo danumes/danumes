@@ -3151,5 +3151,151 @@ div[style*="tatnet.ru"] {
 }
 
 /* ============================================================
+   КАНАЛЫ — ЗАГЛУШКА И ПАНЕЛЬ
+   ============================================================ */
+
+/* Заглушка «Присоединиться» */
+.channel-join {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.channel-join-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 32px;
+  border-radius: var(--r-lg);
+  background: var(--grad);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  letter-spacing: -0.2px;
+}
+
+.channel-join-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+.channel-join-btn:active {
+  transform: translateY(0);
+}
+
+.channel-join-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.channel-join-btn svg {
+  flex-shrink: 0;
+}
+
+/* Панель снизу для подписанных не-админов */
+.channel-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-2);
+  flex-shrink: 0;
+}
+
+.channel-footer-info {
+  font-size: 13px;
+  color: var(--text-2);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.channel-footer-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.channel-footer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border-radius: var(--r-md);
+  background: var(--bg-3);
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.channel-footer-btn:hover {
+  background: var(--bg-4);
+  color: var(--text);
+}
+
+.channel-footer-btn.off {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger);
+}
+
+.channel-footer-btn.off:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+.channel-footer-btn.danger {
+  color: var(--danger);
+}
+
+.channel-footer-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.channel-footer-btn svg {
+  flex-shrink: 0;
+}
+
+/* Мобильная адаптация */
+@media (max-width: 800px) {
+  .channel-footer {
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    gap: 8px;
+  }
+  .channel-footer-info {
+    font-size: 12px;
+  }
+  .channel-footer-btn {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  .channel-footer-btn span {
+    display: none;
+  }
+  .channel-footer-btn svg {
+    width: 22px;
+    height: 22px;
+  }
+  .channel-join-btn {
+    padding: 14px 24px;
+    font-size: 14px;
+  }
+}
+
+/* ============================================================
    КОНЕЦ
    ============================================================ */
