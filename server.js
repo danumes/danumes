@@ -400,6 +400,141 @@ socket.on('group:create', async ({ name, description, type, members, avatarUrl }
     if (cb) cb({ ok: false, error: 'server-error' });
   }
 });
+
+socket.on('group:join', async ({ groupId }, cb) => {
+  try {
+    const me = users.get(socket.id);
+    if (!me) return cb && cb({ ok: false, error: 'not-auth' });
+
+    const g = await getGroup(groupId);
+    if (!g) return cb && cb({ ok: false, error: 'no-group' });
+    if (g.members.includes(me.usernameLower)) return cb && cb({ ok: false, error: 'Уже участник' });
+
+    await dbRun('INSERT OR REPLACE INTO group_members (group_id, username, is_admin) VALUES (?, ?, 0)', [groupId, me.usernameLower]);
+
+    const updated = await getGroup(groupId);
+    if (cb) cb({ ok: true, group: updated });
+
+    for (const m of (updated.members || [])) {
+      emitToUser(m, 'group:updated', updated);
+    }
+
+    const messages = await getChatMessages(groupId);
+    socket.emit('chat:opened', {
+      ok: true,
+      chatId: groupId,
+      messages,
+      group: updated,
+      chatType: 'group'
+    });
+
+    console.log(`➕ group:join ${me.usernameLower} → ${groupId}`);
+  } catch (e) {
+    console.error('group:join', e);
+    if (cb) cb({ ok: false, error: 'server-error' });
+  }
+});
+
+socket.on('group:leave', async ({ groupId }, cb) => {
+  try {
+    const me = users.get(socket.id);
+    if (!me) return cb && cb({ ok: false, error: 'not-auth' });
+
+    const g = await dbGet('SELECT * FROM groups_t WHERE id=?', [groupId]);
+    if (!g) return cb && cb({ ok: false, error: 'no-group' });
+    if (g.owner === me.usernameLower) return cb && cb({ ok: false, error: 'Владелец не может выйти' });
+
+    await dbRun('DELETE FROM group_members WHERE group_id=? AND username=?', [groupId, me.usernameLower]);
+
+    const updated = await getGroup(groupId);
+    if (cb) cb({ ok: true });
+
+    socket.emit('group:left', { groupId });
+
+    for (const m of (updated.members || [])) {
+      emitToUser(m, 'group:updated', updated);
+    }
+
+    console.log(`➖ group:leave ${me.usernameLower} ← ${groupId}`);
+  } catch (e) {
+    console.error('group:leave', e);
+    if (cb) cb({ ok: false, error: 'server-error' });
+  }
+});
+
+socket.on('group:update', async ({ groupId, name, description, avatarUrl }, cb) => {
+  try {
+    const me = users.get(socket.id);
+    if (!me) return cb && cb({ ok: false, error: 'not-auth' });
+
+    const g = await dbGet('SELECT * FROM groups_t WHERE id=?', [groupId]);
+    if (!g) return cb && cb({ ok: false, error: 'no-group' });
+
+    const isOwner = g.owner === me.usernameLower;
+    const isAdmin = await isGroupAdmin(groupId, me.usernameLower);
+    if (!isOwner && !isAdmin) return cb && cb({ ok: false, error: 'Только админ может редактировать' });
+
+    const updates = [];
+    const args = [];
+
+    if (typeof name === 'string') {
+      const n = name.trim().slice(0, 60);
+      if (n.length < 2) return cb && cb({ ok: false, error: 'Название минимум 2 символа' });
+      updates.push('name=?'); args.push(n);
+    }
+    if (typeof description === 'string') {
+      updates.push('description=?'); args.push(description.slice(0, 200));
+    }
+    if (typeof avatarUrl === 'string' || avatarUrl === null) {
+      updates.push('avatar_url=?'); args.push(avatarUrl || null);
+    }
+
+    if (updates.length === 0) return cb && cb({ ok: true, unchanged: true });
+
+    args.push(groupId);
+    await dbRun(`UPDATE groups_t SET ${updates.join(', ')} WHERE id=?`, args);
+
+    const updated = await getGroup(groupId);
+    if (cb) cb({ ok: true, group: updated });
+
+    for (const m of (updated.members || [])) {
+      emitToUser(m, 'group:updated', updated);
+    }
+
+    console.log(`✏️ group:update ${groupId}`);
+  } catch (e) {
+    console.error('group:update', e);
+    if (cb) cb({ ok: false, error: 'server-error' });
+  }
+});
+
+socket.on('group:delete', async ({ groupId }, cb) => {
+  try {
+    const me = users.get(socket.id);
+    if (!me) return cb && cb({ ok: false, error: 'not-auth' });
+
+    const g = await dbGet('SELECT * FROM groups_t WHERE id=?', [groupId]);
+    if (!g) return cb && cb({ ok: false, error: 'no-group' });
+    if (g.owner !== me.usernameLower) return cb && cb({ ok: false, error: 'Только владелец может удалить' });
+
+    const members = await getGroupMembers(groupId);
+
+    await dbRun('DELETE FROM group_members WHERE group_id=?', [groupId]);
+    await dbRun('DELETE FROM messages WHERE chat_id=?', [groupId]);
+    await dbRun('DELETE FROM groups_t WHERE id=?', [groupId]);
+
+    if (cb) cb({ ok: true });
+
+    for (const m of members) {
+      emitToUser(m, 'group:removed', { groupId });
+    }
+
+    console.log(`🗑 group:delete ${groupId}`);
+  } catch (e) {
+    console.error('group:delete', e);
+    if (cb) cb({ ok: false, error: 'server-error' });
+  }
+});
    
   socket.on('auth:login', async ({ login, password }, cb) => {
     try {
@@ -501,6 +636,7 @@ socket.on('message:send', async ({ chatId, text, attachments, sticker, stickerUr
     if (!me) { const tok = socket.handshake?.auth?.token; if (tok) { const row = await tryAuthByToken(socket, tok); if (row) me = users.get(socket.id); } }
     if (!me) return cb && cb({ ok: false, error: 'not-auth' });
     if (!(await canAccessChat(chatId, me.usernameLower))) return cb && cb({ ok: false, error: 'no-access' });
+    if (!(await canWriteToChat(chatId, me.usernameLower))) return cb && cb({ ok: false, error: 'Только администраторы могут публиковать сообщения' });
     let clean = String(text || '').trim().slice(0, 4000);
 if (!clean && (!attachments || attachments.length === 0) && !sticker && !stickerUrl) {
   return cb && cb({ ok: false, error: 'empty' });
