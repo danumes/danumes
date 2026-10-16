@@ -78,6 +78,13 @@ let incomingCallData = null;
 let audioCtxRing = null;
 let ringtoneInterval = null;
 
+let callMinimized = false;
+let audioAnalysers = new Map(); // peer -> analyser
+let audioDataArrays = new Map(); // peer -> Uint8Array
+let speakingCheckInterval = null;
+let localAnalyser = null;
+let localDataArray = null;
+
 let voiceRecorder = null;
 let voiceChunks = [];
 let voiceRecording = false;
@@ -2030,6 +2037,9 @@ function endCall() {
 }
 
 function cleanupCall() {
+   stopAudioAnalysis();
+  callMinimized = false;
+  updateRailCallBtn();
   if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
   if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
   peerConnections.forEach(pc => { try { pc.close(); } catch (e) {} });
@@ -2046,28 +2056,94 @@ function renderCallTiles() {
   const c = $('callVideos'); if (!c) return;
   const count = 1 + remoteStreams.size;
   c.className = 'call-videos ' + (count === 1 ? 'grid-1' : count === 2 ? 'grid-2' : count <= 4 ? 'grid-4' : 'grid-many');
-  let html = `<div class="call-tile" data-peer="local"><video id="localVideo" autoplay playsinline muted></video><div class="call-tile-label">Ты ${!micEnabled ? '🔇' : ''}</div></div>`;
+
+  const myName = me ? me.username : 'Ты';
+  const myAvaUrl = me ? me.avatarUrl : null;
+  const myAvaEmoji = me ? me.avatar : null;
+  const myColor = me ? (me.color || '#a78bfa') : '#a78bfa';
+
+  // Своя плитка
+  let html = renderCallTile({
+    peerKey: 'local',
+    name: myName,
+    avaUrl: myAvaUrl,
+    avaEmoji: myAvaEmoji,
+    color: myColor,
+    stream: localStream,
+    micOn: micEnabled,
+    camOn: camEnabled,
+    isLocal: true
+  });
+
+  // Плитки собеседников
   remoteStreams.forEach((stream, peer) => {
     const u = usersMap.get(keyOf(peer));
-    html += `<div class="call-tile" data-peer="${esc(peer)}"><video id="remoteVideo-${esc(peer)}" autoplay playsinline></video><div class="call-tile-label">${esc(u ? u.username : peer)}</div></div>`;
-  });
-  c.innerHTML = html;
-const lv = $('localVideo');
-if (lv && localStream) { lv.srcObject = localStream; lv.muted = true; lv.play().catch(() => {}); }
-remoteStreams.forEach((stream, peer) => {
-  const el = $(`remoteVideo-${peer}`);
-  if (el) {
-    el.srcObject = stream;
-    el.muted = false;
-    el.volume = 1.0;
-    el.play().catch(err => {
-      console.warn('play error:', err);
-      // Если autoplay заблокирован — играем после первого клика
-      const resume = () => { el.play().catch(() => {}); document.removeEventListener('click', resume); };
-      document.addEventListener('click', resume, { once: true });
+    html += renderCallTile({
+      peerKey: peer,
+      name: u ? u.username : peer,
+      avaUrl: u ? u.avatarUrl : null,
+      avaEmoji: u ? u.avatar : null,
+      color: u ? (u.color || '#a78bfa') : '#a78bfa',
+      stream: stream,
+      micOn: true,
+      camOn: true,
+      isLocal: false
     });
+  });
+
+  c.innerHTML = html;
+
+  // Привязываем локальное видео
+  const lv = $('localVideo');
+  if (lv && localStream) {
+    lv.srcObject = localStream;
+    lv.muted = true;
+    lv.play().catch(() => {});
   }
-});
+
+  // Привязываем удалённые видео
+  remoteStreams.forEach((stream, peer) => {
+    const el = $(`remoteVideo-${peer}`);
+    if (el) {
+      el.srcObject = stream;
+      el.muted = false;
+      el.volume = 1.0;
+      el.play().catch(() => {});
+    }
+  });
+
+  // Запускаем анализ звука
+  startAudioAnalysis();
+
+  // Если звонок свёрнут — показываем иконку в rail
+  updateRailCallBtn();
+}
+
+function renderCallTile(opts) {
+  const { peerKey, name, avaUrl, avaEmoji, color, stream, micOn, camOn, isLocal } = opts;
+  const videoId = isLocal ? 'localVideo' : `remoteVideo-${peerKey}`;
+
+  const hasVideo = camOn && stream && stream.getVideoTracks().length > 0;
+
+  // Аватар
+  let avaHtml = '';
+  if (avaUrl) {
+    avaHtml = `<div class="call-tile-ava" style="background-image:url(${esc(avaUrl)})"></div>`;
+  } else if (avaEmoji && /\p{Emoji}/u.test(avaEmoji)) {
+    avaHtml = `<div class="call-tile-ava" style="background:${color}">${avaEmoji}</div>`;
+  } else {
+    avaHtml = `<div class="call-tile-ava" style="background:${color}">${(name[0] || '?').toUpperCase()}</div>`;
+  }
+
+  const offHtml = !hasVideo ? `<div class="call-tile-off">${avaHtml}<div class="call-tile-name">${esc(name)}</div></div>` : '';
+
+  const labelHtml = `<div class="call-tile-label">${esc(name)}${!micOn ? ' <span class="mic-off"></span>' : ''}</div>`;
+
+  return `<div class="call-tile" data-peer="${esc(peerKey)}">
+    ${hasVideo ? `<video id="${videoId}" autoplay playsinline ${isLocal ? 'muted' : ''}></video>` : ''}
+    ${offHtml}
+    ${labelHtml}
+  </div>`;
 }
 
 function toggleMic() {
@@ -2112,16 +2188,26 @@ async function toggleScreenShare() {
   } catch (e) {}
 }
 function minimizeCall() {
+  callMinimized = true;
   $('callOverlay')?.classList.remove('on');
-  $('miniCall')?.classList.add('on');
-  const mv = $('miniVideo');
-  if (mv) { const first = remoteStreams.values().next().value; if (first) mv.srcObject = first; else if (localStream) mv.srcObject = localStream; }
-  if ($('miniName')) $('miniName').textContent = currentCall?.peer || 'Звонок';
+  updateRailCallBtn();
 }
+
 function restoreCall() {
-  $('miniCall')?.classList.remove('on');
+  callMinimized = false;
   $('callOverlay')?.classList.add('on');
+  updateRailCallBtn();
   renderCallTiles();
+}
+
+function updateRailCallBtn() {
+  const btn = $('railCallBtn');
+  if (!btn) return;
+  if (currentCall && callMinimized) {
+    btn.style.display = 'flex';
+  } else {
+    btn.style.display = 'none';
+  }
 }
 
 socket.on('call:incoming', data => {
@@ -2241,6 +2327,79 @@ function flushCandidates(peer) {
   (pendingCandidates.get(key) || []).forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {}));
   pendingCandidates.delete(key);
 }
+
+function startAudioAnalysis() {
+  // Очищаем старые
+  if (speakingCheckInterval) clearInterval(speakingCheckInterval);
+
+  // Анализ локального звука
+  if (localStream) {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (!localAnalyser) {
+        const src = ctx.createMediaStreamSource(localStream);
+        localAnalyser = ctx.createAnalyser();
+        localAnalyser.fftSize = 512;
+        localDataArray = new Uint8Array(localAnalyser.frequencyBinCount);
+        src.connect(localAnalyser);
+      }
+    } catch (e) {}
+  }
+
+  // Анализ каждого удалённого потока
+  remoteStreams.forEach((stream, peer) => {
+    if (audioAnalysers.has(peer)) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const src = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 512;
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      src.connect(analyser);
+      audioAnalysers.set(peer, analyser);
+      audioDataArrays.set(peer, data);
+    } catch (e) {}
+  });
+
+  // Каждые 150 мс — проверяем громкость
+  speakingCheckInterval = setInterval(() => {
+    // Локально
+    if (localAnalyser && localDataArray && micEnabled) {
+      localAnalyser.getByteFrequencyData(localDataArray);
+      const sum = localDataArray.reduce((a, b) => a + b, 0);
+      const speaking = sum > 1500;
+      const tile = document.querySelector('.call-tile[data-peer="local"]');
+      if (tile) tile.classList.toggle('speaking', speaking);
+    } else {
+      const tile = document.querySelector('.call-tile[data-peer="local"]');
+      if (tile) tile.classList.remove('speaking');
+    }
+
+    // Удалённые
+    remoteStreams.forEach((stream, peer) => {
+      const analyser = audioAnalysers.get(peer);
+      const data = audioDataArrays.get(peer);
+      if (!analyser || !data) return;
+      analyser.getByteFrequencyData(data);
+      const sum = data.reduce((a, b) => a + b, 0);
+      const speaking = sum > 1500;
+      const tile = document.querySelector(`.call-tile[data-peer="${CSS.escape(peer)}"]`);
+      if (tile) tile.classList.toggle('speaking', speaking);
+    });
+  }, 150);
+}
+
+function stopAudioAnalysis() {
+  if (speakingCheckInterval) {
+    clearInterval(speakingCheckInterval);
+    speakingCheckInterval = null;
+  }
+  audioAnalysers.clear();
+  audioDataArrays.clear();
+  localAnalyser = null;
+  localDataArray = null;
+}
+
 function startCallTimer() {
   if (callStartTime) return;
   callStartTime = Date.now();
@@ -3442,6 +3601,11 @@ function initRailNav() {
       document.querySelectorAll('.rail-btn').forEach(b => b.classList.remove('on'));
       btn.classList.add('on');
 
+// Кнопка "вернуться в звонок"
+$('railCallBtn') && ($('railCallBtn').onclick = () => {
+  restoreCall();
+});
+       
       if (action === 'chats') {
         document.body.classList.remove('in-chat');
         document.getElementById('side')?.classList.remove('hidden');
