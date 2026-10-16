@@ -1374,7 +1374,6 @@ function updateMainHead() {
     });
   }
 }
-}
 
 function updatePinnedBar() {
   const bar = $('pinnedBar'); if (!bar || !currentChatId) return;
