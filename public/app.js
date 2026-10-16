@@ -609,7 +609,7 @@ socket.on('group:created', g => { groups.set(g.id, g); renderChatList(); toast('
 socket.on('group:updated', g => {
   groups.set(g.id, g);
   renderChatList();
-  if (currentChatId === g.id) { updateMainHead(); updateChannelNotice(); }
+  if (currentChatId === g.id) { updateMainHead(); updateChannelNotice(); updateChannelUI(); }
 });
 socket.on('group:removed', data => {
   groups.delete(data.groupId);
@@ -1191,11 +1191,12 @@ function openChat(chatId) {
   const es = $('emptyState'); if (es) es.style.display = 'none';
   const cv = $('chatView'); if (cv) cv.style.display = 'flex';
   document.body.classList.add('in-chat');
-  updateMainHead();
+   updateMainHead();
   renderAllMessages();
   updatePinnedBar();
   renderChatList();
   updateChannelNotice();
+  updateChannelUI();
   setTimeout(() => scrollBottom(false), 60);
   if (window.innerWidth <= 800) {
     $('side')?.classList.add('hidden');
@@ -1212,6 +1213,59 @@ function closeChat() {
   document.body.classList.remove('in-chat');
   $('side')?.classList.remove('hidden');
   $('main')?.classList.remove('on-mobile');
+}
+
+/* ============================================================
+   КАНАЛЫ — UI
+   ============================================================ */
+function updateChannelUI() {
+  const joinEl = $('channelJoin');
+  const footerEl = $('channelFooter');
+  const composerEl = $('composer');
+
+  if (!joinEl || !footerEl || !composerEl) return;
+
+  // По умолчанию — всё скрыто, композер показан
+  joinEl.style.display = 'none';
+  footerEl.style.display = 'none';
+  composerEl.style.display = 'flex';
+
+  if (!currentChatMeta) return;
+
+  // Если это не канал — выходим
+  if (currentChatMeta.type !== 'channel') return;
+
+  const g = groups.get(currentChatMeta.groupId) || currentChatMeta.group;
+  if (!g) return;
+
+  const myKey = me ? keyOf(me.username) : '';
+  const isMember = (g.members || []).map(m => keyOf(m)).includes(myKey);
+  const isAdmin = g.owner === myKey || (g.admins || []).map(a => keyOf(a)).includes(myKey);
+
+  if (!isMember) {
+    // Не подписан — кнопка «Присоединиться», композер скрыт
+    joinEl.style.display = 'flex';
+    composerEl.style.display = 'none';
+  } else if (!isAdmin) {
+    // Подписан, но не админ — панель снизу, композер скрыт
+    footerEl.style.display = 'flex';
+    composerEl.style.display = 'none';
+
+    // Обновляем текст и иконку «Звук»
+    const muted = muted.has(currentChatMeta.id);
+    const label = $('channelMuteLabel');
+    const btn = $('channelMuteBtn');
+    if (label) label.textContent = muted ? 'Без звука' : 'Звук';
+    if (btn) btn.classList.toggle('off', muted);
+
+    // Обновляем текст инфо
+    const infoEl = $('channelFooterInfo');
+    if (infoEl) {
+      const n = (g.members || []).length;
+      infoEl.textContent = n + ' ' + plural(n, 'подписчик', 'подписчика', 'подписчиков');
+    }
+  }
+  // Если админ — композер остаётся, всё остальное скрыто
 }
 
 function updateMainHead() {
@@ -1961,6 +2015,59 @@ function showUndoDeleteToast(id, chatId, sec) {
   undoTimer = setTimeout(() => hideUndoDeleteToast(), sec * 1000);
 }
 function hideUndoDeleteToast() { $('undoDeleteToast')?.remove(); if (undoTimer) { clearTimeout(undoTimer); undoTimer = null; } }
+
+/* ============================================================
+   КАНАЛЫ — КНОПКИ
+   ============================================================ */
+function initChannelButtons() {
+  // Присоединиться
+  $('channelJoinBtn') && ($('channelJoinBtn').onclick = () => {
+    if (!currentChatMeta || currentChatMeta.type !== 'channel') return;
+    const gid = currentChatMeta.groupId || currentChatMeta.id;
+    $('channelJoinBtn').disabled = true;
+    socket.emit('group:join', { groupId: gid }, res => {
+      $('channelJoinBtn').disabled = false;
+      if (res && res.ok) {
+        toast('✅ Вы присоединились');
+      } else {
+        toast('❌ ' + (res?.error || 'Не удалось'));
+      }
+    });
+  });
+
+  // Звук вкл/выкл
+  $('channelMuteBtn') && ($('channelMuteBtn').onclick = () => {
+    if (!currentChatId) return;
+    socket.emit('chat:mute', { chatId: currentChatId });
+  });
+
+  // Инфо — открываем профиль канала (пока — модалку инфо)
+  $('channelInfoBtn') && ($('channelInfoBtn').onclick = () => {
+    if (!currentChatMeta) return;
+    const g = groups.get(currentChatMeta.groupId) || currentChatMeta.group;
+    if (!g) return;
+    openChannelInfo(g);
+  });
+
+  // Выйти
+  $('channelLeaveBtn') && ($('channelLeaveBtn').onclick = () => {
+    if (!currentChatMeta) return;
+    if (!confirm('Выйти из канала?')) return;
+    const gid = currentChatMeta.groupId || currentChatMeta.id;
+    socket.emit('group:leave', { groupId: gid }, res => {
+      if (res && res.ok) toast('✅ Вы вышли');
+      else toast('❌ ' + (res?.error || 'Не удалось'));
+    });
+  });
+}
+
+function openChannelInfo(g) {
+  // Временная инфо-модалка — используем alert-подобный тост
+  const n = (g.members || []).length;
+  const desc = g.description || 'Без описания';
+  toast(`📢 ${g.name}\n${desc}\n${n} ${plural(n, 'подписчик', 'подписчика', 'подписчиков')}`, 4000);
+}
+
 /* ============================================================
    ЗВОНКИ
    ============================================================ */
@@ -3663,6 +3770,7 @@ function initAll() {
   initGroups();
   initInviteToast();
   initCalls();
+  initChannelButtons(); 
   initStories();
   initAdmin();
   initProfileEdit();
