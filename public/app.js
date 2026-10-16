@@ -2252,27 +2252,11 @@ socket.on('webrtc:offer', async data => {
   if (!pc) pc = createPeerConnection(data.fromUsername, false, false);
   try {
     await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+    attachLocalTracks(pc);
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
     socket.emit('webrtc:answer', { callId: data.callId, toUsername: data.from, answer });
     flushCandidates(data.from);
-    // Если localStream ещё не готов — ждём его
-    if (!localStream) {
-      const waitStream = setInterval(() => {
-        if (localStream) {
-          clearInterval(waitStream);
-          attachLocalTracks(pc);
-          // Пересоздаём offer/answer с новым треком
-          pc.createOffer().then(offer => {
-            pc.setLocalDescription(offer);
-            socket.emit('webrtc:offer', { callId: data.callId, toUsername: data.from, offer });
-          }).catch(() => {});
-        }
-      }, 100);
-      setTimeout(() => clearInterval(waitStream), 10000);
-    } else {
-      attachLocalTracks(pc);
-    }
   } catch (e) { console.error('webrtc:offer error:', e); }
 });
 socket.on('webrtc:answer', async data => {
