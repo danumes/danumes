@@ -1315,6 +1315,24 @@ function updateMainHead() {
       if (meta.user.avatarUrl) { avaEl.style.backgroundImage = `url(${meta.user.avatarUrl})`; avaEl.textContent = ''; }
       else { avaEl.style.backgroundImage = ''; avaEl.textContent = (meta.user.avatar && /\p{Emoji}/u.test(meta.user.avatar)) ? meta.user.avatar : (meta.user.username[0] || '?').toUpperCase(); avaEl.style.background = meta.user.color || '#a78bfa'; }
     }
+
+// Клик по шапке канала/группы → профиль
+if ((meta.type === 'channel' || meta.type === 'group') && meta.group) {
+  const nameEl2 = $('mhName');
+  const avaEl2 = $('mhAva');
+  const openHandler = (e) => {
+    e.stopPropagation();
+    const g = groups.get(meta.groupId) || meta.group;
+    if (g) openChannelInfo(g);
+  };
+  [nameEl2, avaEl2].forEach(el => {
+    if (el) {
+      el.style.cursor = 'pointer';
+      el.onclick = openHandler;
+    }
+  });
+}
+     
     if (nameEl) nameEl.innerHTML = esc(meta.user.username) + verifyIconsHtml(meta.user);
   if (statusEl) {
   const t = typingByChat.get(meta.id);
@@ -2100,10 +2118,105 @@ function initChannelButtons() {
 }
 
 function openChannelInfo(g) {
-  // Временная инфо-модалка — используем alert-подобный тост
-  const n = (g.members || []).length;
-  const desc = g.description || 'Без описания';
-  toast(`📢 ${g.name}\n${desc}\n${n} ${plural(n, 'подписчик', 'подписчика', 'подписчиков')}`, 4000);
+  if (!g) return;
+  const modal = $('channelProfileModal');
+  const body = $('cpBody');
+  const title = $('cpTitle');
+  if (!modal || !body) return;
+
+  if (title) title.textContent = g.type === 'channel' ? 'Профиль канала' : 'Профиль группы';
+
+  const myKey = me ? keyOf(me.username) : '';
+  const members = (g.members || []).map(m => keyOf(m));
+  const admins = (g.admins || []).map(a => keyOf(a));
+  const isOwner = g.owner === myKey;
+  const isAdmin = isOwner || admins.includes(myKey);
+  const isMember = members.includes(myKey);
+
+  // Аватар
+  let avaHtml = '';
+  if (g.avatarUrl) {
+    avaHtml = `<div class="up-ava" style="background-image:url(${esc(g.avatarUrl)})"></div>`;
+  } else {
+    avaHtml = `<div class="up-ava" style="background:${g.color || '#a78bfa'}">${g.type === 'channel' ? '📢' : '👥'}</div>`;
+  }
+
+  // Счётчик
+  const n = members.length;
+  const countText = n + ' ' + plural(n, 'подписчик', 'подписчика', 'подписчиков');
+
+  // Описание
+  const bioHtml = g.description
+    ? `<div class="up-section">
+         <div class="up-section-title">ОПИСАНИЕ</div>
+         <div class="up-info-row">📝 <span>${esc(g.description)}</span></div>
+       </div>`
+    : `<div class="up-section">
+         <div class="up-section-title">ОПИСАНИЕ</div>
+         <div class="up-info-row" style="opacity:0.6;">📝 <span>Без описания</span></div>
+       </div>`;
+
+  // Статус подписки
+  let statusHtml = '';
+  if (isAdmin) {
+    statusHtml = `<div class="up-status online"><span class="up-dot"></span>${isOwner ? 'Владелец' : 'Админ'}</div>`;
+  } else if (isMember) {
+    statusHtml = `<div class="up-status"><span class="up-dot off"></span>Подписчик</div>`;
+  } else {
+    statusHtml = `<div class="up-status"><span class="up-dot off"></span>Не подписан</div>`;
+  }
+
+  // Кнопка "Редактировать" — только админ/владелец
+  let actionsHtml = '';
+  if (isAdmin) {
+    actionsHtml = `<div class="up-actions">
+      <button class="up-btn primary" id="cpEditBtn">✏️ Редактировать</button>
+    </div>`;
+  } else if (!isMember && g.type === 'channel') {
+    actionsHtml = `<div class="up-actions">
+      <button class="up-btn primary" id="cpJoinBtn">➕ Подписаться</button>
+    </div>`;
+  }
+
+  body.innerHTML = `
+    <div class="up-hero">
+      ${avaHtml}
+      <div class="up-name">${esc(g.name)}</div>
+      <div class="up-handle">${g.type === 'channel' ? '📢 Канал' : '👥 Группа'}</div>
+      ${statusHtml}
+    </div>
+    ${actionsHtml}
+    <div class="up-section">
+      <div class="up-section-title">СТАТИСТИКА</div>
+      <div class="up-info-row">👥 <span>${countText}</span></div>
+      <div class="up-info-row">👑 <span>${admins.length || 1} ${plural(admins.length || 1, 'админ', 'админа', 'админов')}</span></div>
+    </div>
+    ${bioHtml}
+  `;
+
+  modal.classList.add('on');
+
+  // Привязка кнопок
+  $('cpEditBtn') && ($('cpEditBtn').onclick = () => {
+    toast('✏️ Редактор канала — скоро');
+    // Здесь потом откроем модалку редактирования
+  });
+
+  $('cpJoinBtn') && ($('cpJoinBtn').onclick = () => {
+    socket.emit('group:join', { groupId: g.id }, res => {
+      if (res && res.ok) {
+        toast('✅ Подписка оформлена');
+        closeChannelProfile();
+      } else {
+        toast('❌ ' + (res?.error || 'Не удалось'));
+      }
+    });
+  });
+}
+
+function closeChannelProfile() {
+  const modal = $('channelProfileModal');
+  if (modal) modal.classList.remove('on');
 }
 
 /* ============================================================
@@ -3864,6 +3977,8 @@ function initAll() {
   document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('on'); }));
      initRailNav();
 }
+
+$('cpCloseBtn') && ($('cpCloseBtn').onclick = closeChannelProfile);
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initAll);
 else initAll();
