@@ -1964,6 +1964,9 @@ function hideUndoDeleteToast() { $('undoDeleteToast')?.remove(); if (undoTimer) 
 /* ============================================================
    ЗВОНКИ
    ============================================================ */
+/* ============================================================
+   ЗВОНКИ — ПЕРЕПИСАНО
+   ============================================================ */
 function initCalls() {
   $('btnVoiceCall') && ($('btnVoiceCall').onclick = () => startCall('audio'));
   $('btnVideoCall') && ($('btnVideoCall').onclick = () => startCall('video'));
@@ -1972,64 +1975,109 @@ function initCalls() {
   $('callCam') && ($('callCam').onclick = () => toggleCam());
   $('callScreen') && ($('callScreen').onclick = () => toggleScreenShare());
   $('callMinimize') && ($('callMinimize').onclick = () => minimizeCall());
-  $('miniExpand') && ($('miniExpand').onclick = () => restoreCall());
-  $('miniEnd') && ($('miniEnd').onclick = e => { e.stopPropagation(); endCall(); });
   $('incAccept') && ($('incAccept').onclick = () => acceptIncomingCall());
   $('incReject') && ($('incReject').onclick = () => rejectIncomingCall());
 }
 
+/* ---------- ЗВОНЯЩИЙ ---------- */
 async function startCall(type) {
-  if (!currentChatMeta || currentChatMeta.type !== 'private') { toast('❌ Только для личных чатов'); return; }
+  if (!currentChatMeta || currentChatMeta.type !== 'private') {
+    toast('❌ Только для личных чатов');
+    return;
+  }
   const target = currentChatMeta.user;
   if (!target) return;
+
   try {
-    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
-    micEnabled = true;
-    camEnabled = type === 'video';
-    callStartTime = null;
-    currentCall = { id: null, peer: keyOf(target.username), type, isCaller: true };
-    $('callOverlay')?.classList.add('on');
-    if ($('callHeaderName')) $('callHeaderName').textContent = target.username;
-    if ($('callHeaderStatus')) $('callHeaderStatus').textContent = 'Вызов...';
-    if ($('callHeaderTimer')) $('callHeaderTimer').textContent = '00:00';
-    if ($('callHeaderAva')) {
-      if (target.avatarUrl) { $('callHeaderAva').style.backgroundImage = `url(${esc(target.avatarUrl)})`; $('callHeaderAva').textContent = ''; }
-      else { $('callHeaderAva').style.backgroundImage = ''; $('callHeaderAva').textContent = (target.username[0] || '?').toUpperCase(); $('callHeaderAva').style.background = target.color || '#a78bfa'; }
-    }
-    renderCallTiles();
-   socket.emit('call:invite', { chatId: currentChatId, callType: type, withUser: target.username }, res => {
-  if (res && res.ok) {
-    currentCall.id = res.callId;
-    // Создаём peer connection и шлём offer
-    createPeerConnection(target.username, true);
-  } else {
-    toast('❌ Не удалось');
-    cleanupCall();
+    localStream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: type === 'video'
+    });
+  } catch (e) {
+    toast('❌ Нет доступа к ' + (type === 'video' ? 'камере' : 'микрофону'));
+    return;
   }
-});
-  } catch (e) { toast('❌ Нет доступа к ' + (type === 'video' ? 'камере' : 'микрофону')); cleanupCall(); }
+
+  micEnabled = true;
+  camEnabled = (type === 'video');
+  screenEnabled = false;
+  callStartTime = null;
+  callMinimized = false;
+
+  currentCall = {
+    id: null,
+    peer: keyOf(target.username),
+    type,
+    isCaller: true
+  };
+
+  $('callOverlay')?.classList.add('on');
+  if ($('callHeaderName')) $('callHeaderName').textContent = target.username;
+  if ($('callHeaderStatus')) $('callHeaderStatus').textContent = 'Вызов...';
+  if ($('callHeaderTimer')) $('callHeaderTimer').textContent = '00:00';
+
+  renderCallTiles();
+
+  // Отправляем call:invite и ждём call:accepted
+  socket.emit('call:invite', {
+    chatId: currentChatId,
+    callType: type,
+    withUser: target.username
+  }, res => {
+    if (res && res.ok) {
+      currentCall.id = res.callId;
+    } else {
+      toast('❌ ' + (res?.error || 'Не удалось'));
+      cleanupCall();
+    }
+  });
 }
 
+/* ---------- ПРИНИМАЮЩИЙ ---------- */
 async function acceptIncomingCall() {
   if (!incomingCallData) return;
+
   try {
-    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: incomingCallData.callType === 'video' });
-    micEnabled = true;
-    camEnabled = incomingCallData.callType === 'video';
-    $('incomingCall')?.classList.remove('on');
-    stopRingtone();
-    $('callOverlay')?.classList.add('on');
-    if ($('callHeaderName')) $('callHeaderName').textContent = incomingCallData.from.username;
-    if ($('callHeaderStatus')) $('callHeaderStatus').textContent = 'Соединение...';
-    currentCall = { id: incomingCallData.callId, peer: keyOf(incomingCallData.from.username), type: incomingCallData.callType, isCaller: false };
-    renderCallTiles();
-socket.emit('call:accept', { callId: incomingCallData.callId }, res => {
-  if (!res || !res.ok) { toast('❌ Не удалось'); cleanupCall(); return; }
-  // Если pc уже существует (offer пришёл раньше) — добавим треки
-  peerConnections.forEach(pc => attachLocalTracks(pc));
-});
-    incomingCallData = null;
-  } catch (e) { toast('❌ Ошибка'); rejectIncomingCall(); }
+    localStream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: incomingCallData.callType === 'video'
+    });
+  } catch (e) {
+    toast('❌ Нет доступа к микрофону');
+    rejectIncomingCall();
+    return;
+  }
+
+  micEnabled = true;
+  camEnabled = (incomingCallData.callType === 'video');
+  screenEnabled = false;
+  callStartTime = null;
+  callMinimized = false;
+
+  $('incomingCall')?.classList.remove('on');
+  stopRingtone();
+  $('callOverlay')?.classList.add('on');
+
+  if ($('callHeaderName')) $('callHeaderName').textContent = incomingCallData.from.username;
+  if ($('callHeaderStatus')) $('callHeaderStatus').textContent = 'Соединение...';
+
+  currentCall = {
+    id: incomingCallData.callId,
+    peer: keyOf(incomingCallData.from.username),
+    type: incomingCallData.callType,
+    isCaller: false
+  };
+
+  renderCallTiles();
+
+  socket.emit('call:accept', { callId: incomingCallData.callId }, res => {
+    if (!res || !res.ok) {
+      toast('❌ ' + (res?.error || 'Не удалось'));
+      cleanupCall();
+    }
+  });
+
+  incomingCallData = null;
 }
 
 function rejectIncomingCall() {
@@ -2039,49 +2087,146 @@ function rejectIncomingCall() {
   incomingCallData = null;
 }
 
-function endCall() {
-  if (currentCall) {
-    socket.emit('call:end', { callId: currentCall.id });
-    if (callStartTime && currentChatMeta?.type === 'private') {
-      socket.emit('call:save-history', { withUser: currentCall.peer, type: currentCall.type, duration: Math.floor((Date.now() - callStartTime) / 1000), status: 'ended' });
+/* ---------- СОЗДАНИЕ PEER CONNECTION ---------- */
+function attachLocalTracks(pc) {
+  if (!localStream) {
+    console.warn('⚠️ attachLocalTracks: localStream NULL');
+    return;
+  }
+  localStream.getTracks().forEach(t => {
+    const already = pc.getSenders().find(s => s.track === t);
+    if (!already) {
+      console.log('🎤 attachLocalTracks: добавляю', t.kind);
+      pc.addTrack(t, localStream);
     }
+  });
+}
+
+function createPeerConnection(peerKey, isCaller) {
+  const key = keyOf(peerKey);
+  if (peerConnections.has(key)) return peerConnections.get(key);
+
+  const pc = new RTCPeerConnection(RTC_CONFIG);
+  peerConnections.set(key, pc);
+
+  attachLocalTracks(pc);
+
+  pc.onicecandidate = e => {
+    if (e.candidate && currentCall) {
+      socket.emit('webrtc:ice', {
+        callId: currentCall.id,
+        toUsername: peerKey,
+        candidate: e.candidate
+      });
+    }
+  };
+
+  pc.ontrack = e => {
+    console.log('🎵 ontrack:', e.track.kind);
+    if (e.streams && e.streams[0]) {
+      remoteStreams.set(key, e.streams[0]);
+      renderCallTiles();
+      startCallTimer();
+    }
+  };
+
+  pc.onconnectionstatechange = () => {
+    console.log('🔗 connection state:', pc.connectionState);
+    if (pc.connectionState === 'connected') startCallTimer();
+    if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+      // Ничего не делаем — пусть пользователь сам завершит
+    }
+  };
+
+  if (isCaller) {
+    (async () => {
+      try {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        socket.emit('webrtc:offer', {
+          callId: currentCall.id,
+          toUsername: peerKey,
+          offer
+        });
+        console.log('📤 webrtc:offer отправлен');
+      } catch (e) {
+        console.error('❌ createOffer:', e);
+      }
+    })();
+  }
+
+  return pc;
+}
+
+function flushCandidates(peer) {
+  const key = keyOf(peer);
+  const pc = peerConnections.get(key);
+  if (!pc) return;
+  (pendingCandidates.get(key) || []).forEach(c => {
+    pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {});
+  });
+  pendingCandidates.delete(key);
+}
+
+/* ---------- ПРИЁМ/ЗАВЕРШЕНИЕ ---------- */
+function endCall() {
+  if (currentCall && currentCall.id) {
+    socket.emit('call:end', { callId: currentCall.id });
   }
   cleanupCall();
 }
 
 function cleanupCall() {
-   stopAudioAnalysis();
+  stopAudioAnalysis();
   callMinimized = false;
   updateRailCallBtn();
-  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
-  if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
+
+  if (localStream) {
+    localStream.getTracks().forEach(t => t.stop());
+    localStream = null;
+  }
+  if (screenStream) {
+    screenStream.getTracks().forEach(t => t.stop());
+    screenStream = null;
+  }
+
   peerConnections.forEach(pc => { try { pc.close(); } catch (e) {} });
-  peerConnections.clear(); pendingCandidates.clear(); remoteStreams.clear();
-  currentCall = null; callStartTime = null;
+  peerConnections.clear();
+  pendingCandidates.clear();
+  remoteStreams.clear();
+
+  currentCall = null;
+  callStartTime = null;
   if (callTimerInterval) { clearInterval(callTimerInterval); callTimerInterval = null; }
-  micEnabled = true; camEnabled = false; screenEnabled = false;
+
+  micEnabled = true;
+  camEnabled = false;
+  screenEnabled = false;
+
   $('callOverlay')?.classList.remove('on');
-  $('miniCall')?.classList.remove('on');
   stopRingtone();
 }
 
+/* ---------- ОТРИСОВКА ПЛИТОК ---------- */
 function renderCallTiles() {
-  const c = $('callVideos'); if (!c) return;
-  const count = 1 + remoteStreams.size;
-  c.className = 'call-videos ' + (count === 1 ? 'grid-1' : count === 2 ? 'grid-2' : count <= 4 ? 'grid-4' : 'grid-many');
+  const c = $('callVideos');
+  if (!c) return;
 
-  const myName = me ? me.username : 'Ты';
-  const myAvaUrl = me ? me.avatarUrl : null;
-  const myAvaEmoji = me ? me.avatar : null;
-  const myColor = me ? (me.color || '#a78bfa') : '#a78bfa';
+  const count = 1 + remoteStreams.size;
+  c.className = 'call-videos ' + (
+    count === 1 ? 'grid-1' :
+    count === 2 ? 'grid-2' :
+    count <= 4 ? 'grid-4' : 'grid-many'
+  );
 
   // Своя плитка
+  const myName = me ? me.username : 'Ты';
   let html = renderCallTile({
     peerKey: 'local',
     name: myName,
-    avaUrl: myAvaUrl,
-    avaEmoji: myAvaEmoji,
-    color: myColor,
+    avaUrl: me ? me.avatarUrl : null,
+    avaEmoji: me ? me.avatar : null,
+    color: me ? (me.color || '#a78bfa') : '#a78bfa',
     stream: localStream,
     micOn: micEnabled,
     camOn: camEnabled,
@@ -2106,7 +2251,7 @@ function renderCallTiles() {
 
   c.innerHTML = html;
 
-  // Привязываем локальное видео
+  // Своё видео
   const lv = $('localVideo');
   if (lv && localStream) {
     lv.srcObject = localStream;
@@ -2114,7 +2259,7 @@ function renderCallTiles() {
     lv.play().catch(() => {});
   }
 
-  // Привязываем удалённые видео
+  // Видео собеседников
   remoteStreams.forEach((stream, peer) => {
     const el = $(`remoteVideo-${peer}`);
     if (el) {
@@ -2125,20 +2270,15 @@ function renderCallTiles() {
     }
   });
 
-  // Запускаем анализ звука
   startAudioAnalysis();
-
-  // Если звонок свёрнут — показываем иконку в rail
   updateRailCallBtn();
 }
 
 function renderCallTile(opts) {
   const { peerKey, name, avaUrl, avaEmoji, color, stream, micOn, camOn, isLocal } = opts;
   const videoId = isLocal ? 'localVideo' : `remoteVideo-${peerKey}`;
-
   const hasVideo = camOn && stream && stream.getVideoTracks().length > 0;
 
-  // Аватар
   let avaHtml = '';
   if (avaUrl) {
     avaHtml = `<div class="call-tile-ava" style="background-image:url(${esc(avaUrl)})"></div>`;
@@ -2148,7 +2288,9 @@ function renderCallTile(opts) {
     avaHtml = `<div class="call-tile-ava" style="background:${color}">${(name[0] || '?').toUpperCase()}</div>`;
   }
 
-  const offHtml = !hasVideo ? `<div class="call-tile-off">${avaHtml}<div class="call-tile-name">${esc(name)}</div></div>` : '';
+  const offHtml = !hasVideo
+    ? `<div class="call-tile-off">${avaHtml}<div class="call-tile-name">${esc(name)}</div></div>`
+    : '';
 
   const labelHtml = `<div class="call-tile-label">${esc(name)}${!micOn ? ' <span class="mic-off"></span>' : ''}</div>`;
 
@@ -2159,34 +2301,47 @@ function renderCallTile(opts) {
   </div>`;
 }
 
+/* ---------- МИКРОФОН / КАМЕРА / ЭКРАН ---------- */
 function toggleMic() {
   if (!localStream) return;
   micEnabled = !micEnabled;
   localStream.getAudioTracks().forEach(t => { t.enabled = micEnabled; });
   $('callMic')?.classList.toggle('off', !micEnabled);
-  if (currentCall) socket.emit('call:media', { callId: currentCall.id, micOn: micEnabled, camOn: camEnabled, screenOn: screenEnabled });
 }
+
 async function toggleCam() {
   if (!localStream) return;
   camEnabled = !camEnabled;
   const vts = localStream.getVideoTracks();
+
   if (vts.length === 0 && camEnabled) {
     try {
       const s = await navigator.mediaDevices.getUserMedia({ video: true });
       const track = s.getVideoTracks()[0];
       localStream.addTrack(track);
-      if ($('localVideo')) { $('localVideo').srcObject = localStream; $('localVideo').play().catch(() => {}); }
       peerConnections.forEach(pc => {
         const snd = pc.getSenders().find(x => x.track && x.track.kind === 'video');
         if (snd) snd.replaceTrack(track);
         else pc.addTrack(track, localStream);
       });
-    } catch (e) { camEnabled = false; }
-  } else vts.forEach(t => { t.enabled = camEnabled; });
+    } catch (e) {
+      camEnabled = false;
+    }
+  } else {
+    vts.forEach(t => { t.enabled = camEnabled; });
+  }
+
   $('callCam')?.classList.toggle('off', !camEnabled);
+  renderCallTiles();
 }
+
 async function toggleScreenShare() {
-  if (screenEnabled) { if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; } screenEnabled = false; return; }
+  if (screenEnabled) {
+    if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
+    screenEnabled = false;
+    renderCallTiles();
+    return;
+  }
   try {
     screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
     screenEnabled = true;
@@ -2196,10 +2351,12 @@ async function toggleScreenShare() {
       if (snd) snd.replaceTrack(track);
       else pc.addTrack(track, screenStream);
     });
-    if ($('localVideo')) $('localVideo').srcObject = screenStream;
     track.onended = () => toggleScreenShare();
+    renderCallTiles();
   } catch (e) {}
 }
+
+/* ---------- СВОРАЧИВАНИЕ ---------- */
 function minimizeCall() {
   callMinimized = true;
   $('callOverlay')?.classList.remove('on');
@@ -2216,124 +2373,43 @@ function restoreCall() {
 function updateRailCallBtn() {
   const btn = $('railCallBtn');
   if (!btn) return;
-  if (currentCall && callMinimized) {
-    btn.style.display = 'flex';
-  } else {
-    btn.style.display = 'none';
-  }
+  btn.style.display = (currentCall && callMinimized) ? 'flex' : 'none';
 }
 
-socket.on('call:incoming', data => {
-  incomingCallData = data;
-  if ($('incName')) $('incName').textContent = data.from.username;
-  if ($('incType')) $('incType').textContent = (data.callType === 'video' ? 'Видеозвонок' : 'Аудиозвонок');
-  if ($('incAva')) {
-    if (data.from.avatarUrl) { $('incAva').style.backgroundImage = `url(${esc(data.from.avatarUrl)})`; $('incAva').textContent = ''; }
-    else { $('incAva').style.backgroundImage = ''; $('incAva').textContent = (data.from.username[0] || '?').toUpperCase(); $('incAva').style.background = data.from.color || '#a78bfa'; }
-  }
-  $('incomingCall')?.classList.add('on');
-  playRingtone();
-});
-socket.on('call:peers', data => { (data.peers || []).forEach(peer => createPeerConnection(peer.usernameLower, true)); });
-socket.on('call:participant-joined', data => { createPeerConnection(data.participant.usernameLower, false); });
-socket.on('call:participant-left', data => { const pc = peerConnections.get(keyOf(data.username)); if (pc) pc.close(); peerConnections.delete(keyOf(data.username)); remoteStreams.delete(keyOf(data.username)); renderCallTiles(); });
-socket.on('call:rejected', () => { toast('📞 Отклонено'); cleanupCall(); });
-socket.on('call:accepted', data => {
-  console.log('✅ call:accepted', data);
-  if (!currentCall) return;
-  if ($('callHeaderStatus')) $('callHeaderStatus').textContent = 'Соединение...';
-  // Пиры — от сервера приходят? Если нет — не делаем ничего,
-  // peer connection уже создан в startCall.
-});
-socket.on('call:ended', () => cleanupCall());
-socket.on('call:cancelled', () => cleanupCall());
-socket.on('webrtc:offer', async data => {
-  let pc = peerConnections.get(keyOf(data.from));
-  if (!pc) pc = createPeerConnection(data.fromUsername, false, false);
-  try {
-    await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-    attachLocalTracks(pc);
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-    socket.emit('webrtc:answer', { callId: data.callId, toUsername: data.from, answer });
-    flushCandidates(data.from);
-  } catch (e) { console.error('webrtc:offer error:', e); }
-});
-socket.on('webrtc:answer', async data => {
-  const pc = peerConnections.get(keyOf(data.from));
-  console.log('📥 Получил webrtc:answer от', data.from, 'pc=', !!pc, 'state=', pc?.signalingState);
-  if (pc && pc.signalingState === 'have-local-offer') {
-    try { await pc.setRemoteDescription(new RTCSessionDescription(data.answer)); flushCandidates(data.from); startCallTimer(); console.log('✅ Answer применён'); } catch (e) { console.error('❌ setRemoteDescription:', e); }
-  }
-});
-socket.on('webrtc:ice', data => {
-  const key = keyOf(data.from), pc = peerConnections.get(key);
-  if (pc && pc.remoteDescription) pc.addIceCandidate(new RTCIceCandidate(data.candidate)).catch(() => {});
-  else { if (!pendingCandidates.has(key)) pendingCandidates.set(key, []); pendingCandidates.get(key).push(data.candidate); }
-});
+/* ---------- ТАЙМЕР ---------- */
+function startCallTimer() {
+  if (callStartTime) return;
+  callStartTime = Date.now();
+  if ($('callHeaderStatus')) $('callHeaderStatus').textContent = 'Соединено';
 
-function attachLocalTracks(pc) {
-  if (!localStream) {
-    console.warn('⚠️ attachLocalTracks: localStream NULL');
-    return;
-  }
-  const tracks = localStream.getTracks();
-  tracks.forEach(t => {
-    const already = pc.getSenders().find(s => s.track === t);
-    if (!already) {
-      console.log('🎤 attachLocalTracks: добавляю', t.kind);
-      pc.addTrack(t, localStream);
-    }
-  });
+  if (callTimerInterval) clearInterval(callTimerInterval);
+  callTimerInterval = setInterval(() => {
+    const s = Math.floor((Date.now() - callStartTime) / 1000);
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    const str = `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+    if ($('callHeaderTimer')) $('callHeaderTimer').textContent = str;
+  }, 1000);
 }
 
-function createPeerConnection(peer, isCaller, sendOffer = true) {
-  const key = keyOf(peer);
-  let pc = peerConnections.get(key);
-  if (pc) return pc;
-  pc = new RTCPeerConnection(RTC_CONFIG);
-  peerConnections.set(key, pc);
-attachLocalTracks(pc);
-  pc.onicecandidate = e => { if (e.candidate && currentCall) socket.emit('webrtc:ice', { callId: currentCall.id, toUsername: peer, candidate: e.candidate }); };
-pc.ontrack = e => {
-  console.log('🎵 ontrack:', e.track.kind, 'streams:', e.streams.length);
-  remoteStreams.set(key, e.streams[0]);
-  renderCallTiles();
-  startCallTimer();
-};
-  pc.onconnectionstatechange = () => { if (pc.connectionState === 'connected') startCallTimer(); };
-if (isCaller && sendOffer && currentCall && currentCall.id) {
-  (async () => {
-    try {
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      console.log('📤 Отправляю webrtc:offer на', peer, 'callId:', currentCall.id);
-      socket.emit('webrtc:offer', { callId: currentCall.id, toUsername: peer, offer });
-    } catch (e) {
-      console.error('❌ createOffer ERROR:', e);
-    }
-  })();
-} else {
-  console.warn('⚠️ createPeerConnection: не отправляю offer. isCaller=', isCaller, 'sendOffer=', sendOffer, 'currentCall=', !!currentCall, 'currentCall.id=', currentCall?.id);
-}
-  return pc;
-}
-function flushCandidates(peer) {
-  const key = keyOf(peer), pc = peerConnections.get(key);
-  if (!pc) return;
-  (pendingCandidates.get(key) || []).forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {}));
-  pendingCandidates.delete(key);
+/* ---------- АНАЛИЗ ЗВУКА (пульсация) ---------- */
+let _audioCtx = null;
+function getAudioCtx() {
+  if (!_audioCtx) {
+    try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch (e) { _audioCtx = null; }
+  }
+  return _audioCtx;
 }
 
 function startAudioAnalysis() {
-  // Очищаем старые
   if (speakingCheckInterval) clearInterval(speakingCheckInterval);
 
-  // Анализ локального звука
-  if (localStream) {
+  // Локальный
+  if (localStream && !localAnalyser) {
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      if (!localAnalyser) {
+      const ctx = getAudioCtx();
+      if (ctx) {
         const src = ctx.createMediaStreamSource(localStream);
         localAnalyser = ctx.createAnalyser();
         localAnalyser.fftSize = 512;
@@ -2343,11 +2419,12 @@ function startAudioAnalysis() {
     } catch (e) {}
   }
 
-  // Анализ каждого удалённого потока
+  // Удалённые
   remoteStreams.forEach((stream, peer) => {
     if (audioAnalysers.has(peer)) return;
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = getAudioCtx();
+      if (!ctx) return;
       const src = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 512;
@@ -2358,18 +2435,13 @@ function startAudioAnalysis() {
     } catch (e) {}
   });
 
-  // Каждые 150 мс — проверяем громкость
   speakingCheckInterval = setInterval(() => {
     // Локально
     if (localAnalyser && localDataArray && micEnabled) {
       localAnalyser.getByteFrequencyData(localDataArray);
       const sum = localDataArray.reduce((a, b) => a + b, 0);
-      const speaking = sum > 1500;
       const tile = document.querySelector('.call-tile[data-peer="local"]');
-      if (tile) tile.classList.toggle('speaking', speaking);
-    } else {
-      const tile = document.querySelector('.call-tile[data-peer="local"]');
-      if (tile) tile.classList.remove('speaking');
+      if (tile) tile.classList.toggle('speaking', sum > 1500);
     }
 
     // Удалённые
@@ -2379,9 +2451,8 @@ function startAudioAnalysis() {
       if (!analyser || !data) return;
       analyser.getByteFrequencyData(data);
       const sum = data.reduce((a, b) => a + b, 0);
-      const speaking = sum > 1500;
       const tile = document.querySelector(`.call-tile[data-peer="${CSS.escape(peer)}"]`);
-      if (tile) tile.classList.toggle('speaking', speaking);
+      if (tile) tile.classList.toggle('speaking', sum > 1500);
     });
   }, 150);
 }
@@ -2397,34 +2468,116 @@ function stopAudioAnalysis() {
   localDataArray = null;
 }
 
-function startCallTimer() {
-  if (callStartTime) return;
-  callStartTime = Date.now();
-  if ($('callHeaderStatus')) $('callHeaderStatus').textContent = 'Соединено';
-  if (callTimerInterval) clearInterval(callTimerInterval);
-  callTimerInterval = setInterval(() => {
-    const s = Math.floor((Date.now() - callStartTime) / 1000);
-    const m = Math.floor(s / 60), sec = s % 60;
-    const str = `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
-    if ($('callHeaderTimer')) $('callHeaderTimer').textContent = str;
-    if ($('miniTime')) $('miniTime').textContent = str;
-  }, 1000);
-}
+/* ---------- РИНГТОН ---------- */
 function playRingtone() {
   try {
     if (!audioCtxRing) audioCtxRing = new (window.AudioContext || window.webkitAudioContext)();
     if (ringtoneInterval) clearInterval(ringtoneInterval);
     ringtoneInterval = setInterval(() => {
-      const osc = audioCtxRing.createOscillator(), gain = audioCtxRing.createGain();
-      osc.connect(gain); gain.connect(audioCtxRing.destination);
-      osc.frequency.value = 880; gain.gain.setValueAtTime(0.0001, audioCtxRing.currentTime);
+      const osc = audioCtxRing.createOscillator();
+      const gain = audioCtxRing.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtxRing.destination);
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.0001, audioCtxRing.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.15, audioCtxRing.currentTime + 0.05);
       gain.gain.exponentialRampToValueAtTime(0.0001, audioCtxRing.currentTime + 0.4);
-      osc.start(); osc.stop(audioCtxRing.currentTime + 0.4);
+      osc.start();
+      osc.stop(audioCtxRing.currentTime + 0.4);
     }, 1200);
   } catch (e) {}
 }
-function stopRingtone() { if (ringtoneInterval) { clearInterval(ringtoneInterval); ringtoneInterval = null; } }
+
+function stopRingtone() {
+  if (ringtoneInterval) {
+    clearInterval(ringtoneInterval);
+    ringtoneInterval = null;
+  }
+}
+
+/* ---------- SOCKET EVENTS ЗВОНКОВ ---------- */
+socket.on('call:incoming', data => {
+  incomingCallData = data;
+  if ($('incName')) $('incName').textContent = data.from.username;
+  if ($('incType')) $('incType').textContent = (data.callType === 'video' ? 'Видеозвонок' : 'Аудиозвонок');
+  if ($('incAva')) {
+    if (data.from.avatarUrl) {
+      $('incAva').style.backgroundImage = `url(${esc(data.from.avatarUrl)})`;
+      $('incAva').textContent = '';
+    } else {
+      $('incAva').style.backgroundImage = '';
+      $('incAva').textContent = (data.from.username[0] || '?').toUpperCase();
+      $('incAva').style.background = data.from.color || '#a78bfa';
+    }
+  }
+  $('incomingCall')?.classList.add('on');
+  playRingtone();
+});
+
+socket.on('call:accepted', data => {
+  console.log('✅ call:accepted');
+  if (!currentCall || !currentCall.isCaller) return;
+  if ($('callHeaderStatus')) $('callHeaderStatus').textContent = 'Соединение...';
+  // Вот здесь и только здесь звонящий создаёт pc и шлёт offer
+  createPeerConnection(currentCall.peer, true);
+});
+
+socket.on('call:rejected', () => {
+  toast('📞 Отклонено');
+  cleanupCall();
+});
+
+socket.on('call:ended', () => {
+  cleanupCall();
+});
+
+socket.on('call:cancelled', () => {
+  cleanupCall();
+});
+
+socket.on('webrtc:offer', async data => {
+  let pc = peerConnections.get(keyOf(data.from));
+  if (!pc) pc = createPeerConnection(data.fromUsername, false);
+
+  try {
+    await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+    attachLocalTracks(pc);
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    socket.emit('webrtc:answer', {
+      callId: data.callId,
+      toUsername: data.from,
+      answer
+    });
+    flushCandidates(data.from);
+    console.log('📤 webrtc:answer отправлен');
+  } catch (e) {
+    console.error('❌ webrtc:offer error:', e);
+  }
+});
+
+socket.on('webrtc:answer', async data => {
+  const pc = peerConnections.get(keyOf(data.from));
+  if (!pc) return;
+  try {
+    await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+    flushCandidates(data.from);
+    console.log('✅ Answer применён');
+  } catch (e) {
+    console.error('❌ setRemoteDescription:', e);
+  }
+});
+
+socket.on('webrtc:ice', data => {
+  const key = keyOf(data.from);
+  const pc = peerConnections.get(key);
+  if (pc && pc.remoteDescription) {
+    pc.addIceCandidate(new RTCIceCandidate(data.candidate)).catch(() => {});
+  } else {
+    if (!pendingCandidates.has(key)) pendingCandidates.set(key, []);
+    pendingCandidates.get(key).push(data.candidate);
+  }
+});
 
 /* ============================================================
    ГОЛОСОВЫЕ / КРУЖКИ
