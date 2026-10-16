@@ -2197,10 +2197,9 @@ function openChannelInfo(g) {
 
   // Привязка кнопок
   $('cpEditBtn') && ($('cpEditBtn').onclick = () => {
-    toast('✏️ Редактор канала — скоро');
-    // Здесь потом откроем модалку редактирования
+    openChannelEdit(g);
   });
-
+   
   $('cpJoinBtn') && ($('cpJoinBtn').onclick = () => {
     socket.emit('group:join', { groupId: g.id }, res => {
       if (res && res.ok) {
@@ -2234,6 +2233,125 @@ function initCalls() {
   $('callMinimize') && ($('callMinimize').onclick = () => minimizeCall());
   $('incAccept') && ($('incAccept').onclick = () => acceptIncomingCall());
   $('incReject') && ($('incReject').onclick = () => rejectIncomingCall());
+}
+
+/* ============================================================
+   РЕДАКТИРОВАНИЕ КАНАЛА / ГРУППЫ
+   ============================================================ */
+let ceAvatarUrl = null;
+
+function openChannelEdit(g) {
+  if (!g) return;
+  const modal = $('channelEditModal');
+  if (!modal) return;
+
+  ceAvatarUrl = null; // сброс — при сохранении поймём, менял ли юзер
+
+  // Заголовок
+  if ($('ceTitle')) $('ceTitle').textContent = (g.type === 'channel' ? 'Редактировать канал' : 'Редактировать группу');
+
+  // Аватар
+  const avaBtn = $('ceAvatar');
+  const avaEmoji = $('ceAvatarEmoji');
+  if (avaBtn && avaEmoji) {
+    if (g.avatarUrl) {
+      avaBtn.style.backgroundImage = `url(${esc(g.avatarUrl)})`;
+      avaBtn.style.backgroundSize = 'cover';
+      avaBtn.style.backgroundPosition = 'center';
+      avaEmoji.textContent = '';
+    } else {
+      avaBtn.style.backgroundImage = '';
+      avaEmoji.textContent = g.type === 'channel' ? '📢' : '👥';
+    }
+  }
+
+  // Название и описание
+  if ($('ceName')) $('ceName').value = g.name || '';
+  if ($('ceDesc')) $('ceDesc').value = g.description || '';
+
+  // Открываем
+  modal.classList.add('on');
+}
+
+function closeChannelEdit() {
+  const modal = $('channelEditModal');
+  if (modal) modal.classList.remove('on');
+  ceAvatarUrl = null;
+}
+
+function initChannelEdit() {
+  // Кнопка закрытия
+  $('ceCloseBtn') && ($('ceCloseBtn').onclick = closeChannelEdit);
+  $('ceCancel') && ($('ceCancel').onclick = closeChannelEdit);
+
+  // Загрузка аватара
+  $('ceAvatar') && ($('ceAvatar').onclick = () => {
+    const fi = document.createElement('input');
+    fi.type = 'file';
+    fi.accept = 'image/*';
+    fi.onchange = async () => {
+      if (!fi.files[0]) return;
+      const fd = new FormData();
+      fd.append('file', fi.files[0]);
+      try {
+        const r = await fetch('/upload', { method: 'POST', body: fd });
+        const d = await r.json();
+        if (d && d.url) {
+          ceAvatarUrl = d.url;
+          const avaBtn = $('ceAvatar');
+          const avaEmoji = $('ceAvatarEmoji');
+          if (avaBtn) {
+            avaBtn.style.backgroundImage = `url(${d.url})`;
+            avaBtn.style.backgroundSize = 'cover';
+            avaBtn.style.backgroundPosition = 'center';
+          }
+          if (avaEmoji) avaEmoji.textContent = '';
+        }
+      } catch (e) { toast('❌ Ошибка загрузки'); }
+    };
+    fi.click();
+  });
+
+  // Убрать аватар
+  $('ceClearAvatar') && ($('ceClearAvatar').onclick = () => {
+    ceAvatarUrl = ''; // пустая строка = явно сбрасываем на сервере
+    const avaBtn = $('ceAvatar');
+    const avaEmoji = $('ceAvatarEmoji');
+    if (avaBtn) avaBtn.style.backgroundImage = '';
+    const g = groups.get(currentChatMeta?.groupId) || currentChatMeta?.group;
+    if (avaEmoji) avaEmoji.textContent = g?.type === 'channel' ? '📢' : '👥';
+  });
+
+  // Сохранить
+  $('ceSave') && ($('ceSave').onclick = () => {
+    if (!currentChatMeta) return;
+    const gid = currentChatMeta.groupId || currentChatMeta.id;
+    if (!gid) return;
+
+    const name = $('ceName')?.value.trim();
+    if (!name || name.length < 2) { toast('❌ Название минимум 2 символа'); return; }
+    const description = $('ceDesc')?.value.trim() || '';
+
+    const payload = { groupId: gid, name, description };
+    if (ceAvatarUrl !== null) payload.avatarUrl = ceAvatarUrl || null;
+
+    $('ceSave').disabled = true;
+    socket.emit('group:update', payload, res => {
+      $('ceSave').disabled = false;
+      if (res && res.ok) {
+        toast('✅ Сохранено');
+        closeChannelEdit();
+        // group:updated с сервера сам обновит groups Map, renderChatList и updateMainHead
+        // Плюс обновим открытый профиль канала, если он открыт
+        setTimeout(() => {
+          const g = groups.get(gid);
+          if (g) openChannelInfo(g);
+        }, 150);
+      } else {
+        toast('❌ ' + (res?.error || 'Не удалось'));
+      }
+    });
+  });
 }
 
 /* ---------- ЗВОНЯЩИЙ ---------- */
@@ -3959,6 +4077,7 @@ function initAll() {
   initInviteToast();
   initCalls();
   initChannelButtons(); 
+  initChannelEdit();
   initStories();
   initAdmin();
   initProfileEdit();
