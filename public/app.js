@@ -193,6 +193,19 @@ function formatChatDate(ts) {
   return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
 }
 
+function toast(text, dur = 2500) {
+  const c = document.getElementById('toasts');
+  if (!c) return;
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = text;
+  c.appendChild(el);
+  setTimeout(() => {
+    el.style.opacity = '0';
+    setTimeout(() => el.remove(), 250);
+  }, dur);
+}
+
 /* ============================================================
    НАСТРОЙКИ
    ============================================================ */
