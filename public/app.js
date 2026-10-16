@@ -2261,14 +2261,24 @@ function renderCallTiles() {
 
   // Видео собеседников
   remoteStreams.forEach((stream, peer) => {
-    const el = $(`remoteVideo-${peer}`);
-    if (el) {
-      el.srcObject = stream;
-      el.muted = false;
-      el.volume = 1.0;
-      el.play().catch(() => {});
-    }
-  });
+  const vEl = $(`remoteVideo-${peer}`);
+  if (vEl) {
+    vEl.srcObject = stream;
+    vEl.muted = false;
+    vEl.volume = 1.0;
+    vEl.play().catch(() => {});
+  }
+  const aEl = $(`remoteAudio-${peer}`);
+  if (aEl) {
+    aEl.srcObject = stream;
+    aEl.volume = 1.0;
+    aEl.play().catch((err) => {
+      console.warn('audio play error:', err);
+      const resume = () => { aEl.play().catch(() => {}); document.removeEventListener('click', resume); };
+      document.addEventListener('click', resume, { once: true });
+    });
+  }
+});
 
   startAudioAnalysis();
   updateRailCallBtn();
@@ -2277,6 +2287,7 @@ function renderCallTiles() {
 function renderCallTile(opts) {
   const { peerKey, name, avaUrl, avaEmoji, color, stream, micOn, camOn, isLocal } = opts;
   const videoId = isLocal ? 'localVideo' : `remoteVideo-${peerKey}`;
+  const audioId = isLocal ? 'localAudio' : `remoteAudio-${peerKey}`;
   const hasVideo = camOn && stream && stream.getVideoTracks().length > 0;
 
   let avaHtml = '';
@@ -2295,8 +2306,10 @@ function renderCallTile(opts) {
   const labelHtml = `<div class="call-tile-label">${esc(name)}${!micOn ? ' <span class="mic-off"></span>' : ''}</div>`;
 
   return `<div class="call-tile" data-peer="${esc(peerKey)}">
-    ${hasVideo ? `<video id="${videoId}" autoplay playsinline ${isLocal ? 'muted' : ''}></video>` : ''}
-    ${offHtml}
+    ${hasVideo
+      ? `<video id="${videoId}" autoplay playsinline ${isLocal ? 'muted' : ''}></video>`
+      : `<div class="call-tile-off">${avaHtml}<div class="call-tile-name">${esc(name)}</div></div>`}
+    ${!isLocal ? `<audio id="${audioId}" autoplay></audio>` : ''}
     ${labelHtml}
   </div>`;
 }
