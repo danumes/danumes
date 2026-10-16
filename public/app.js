@@ -551,6 +551,8 @@ function enterApp(user) {
   updateMyBar();
   renderChatList();
   hideSplash();
+  // На случай, если открыт канал — обновить UI
+  setTimeout(updateChannelUI, 100);
 }
 
 function hideSplash() {
@@ -598,6 +600,9 @@ socket.on('registered', data => {
   });
 });
 
+  // Обновить UI канала, если он был открыт
+  setTimeout(updateChannelUI, 100);
+
 socket.on('users:update', users => {
   rebuildUsers(users || []);
   renderChatList();
@@ -630,7 +635,7 @@ socket.on('chat:opened', data => {
   const chatId = data.chatId, messages = data.messages || [];
   if (data.chatType === 'group' && data.group) {
     groups.set(data.group.id, data.group);
-    chatsMeta.set(chatId, { id: chatId, type: 'group', name: data.group.name, groupId: chatId, group: data.group });
+    chatsMeta.set(chatId, { id: chatId, type: data.group.type || 'group', name: data.group.name, groupId: chatId, group: data.group });
   } else if (data.otherUser) {
     chatsMeta.set(chatId, { id: chatId, type: 'private', name: data.otherUser.username, otherKey: keyOf(data.otherUser.username), user: data.otherUser });
   }
@@ -639,6 +644,33 @@ socket.on('chat:opened', data => {
   if (last) lastMsg.set(chatId, last);
   renderChatList();
   openChat(chatId);
+  // После открытия — сразу обновить UI канала
+  setTimeout(updateChannelUI, 50);
+});
+
+socket.on('groups:search', async ({ query }, cb) => {
+  try {
+    const me = users.get(socket.id);
+    if (!me) return cb && cb([]);
+    const q = String(query || '').trim().toLowerCase();
+    if (!q) return cb && cb([]);
+
+    const rows = await dbAll(
+      'SELECT * FROM groups_t WHERE LOWER(name) LIKE ? OR LOWER(description) LIKE ? LIMIT 30',
+      ['%' + q + '%', '%' + q + '%']
+    );
+
+    const result = [];
+    for (const row of rows) {
+      const g = await getGroup(row.id);
+      if (g) result.push(g);
+    }
+
+    cb(result);
+  } catch (e) {
+    console.error('groups:search', e);
+    if (cb) cb([]);
+  }
 });
 
 socket.on('message', msg => {
@@ -708,7 +740,12 @@ socket.on('chat:read', data => {
 });
 
 socket.on('chat:pinned', data => { pinned.clear(); (data.list || []).forEach(c => pinned.add(c)); renderChatList(); });
-socket.on('chat:muted', data => { muted.clear(); (data.list || []).forEach(c => muted.add(c)); renderChatList(); });
+socket.on('chat:muted', data => {
+  muted.clear();
+  (data.list || []).forEach(c => muted.add(c));
+  renderChatList();
+  updateChannelUI();
+});
 
 socket.on('message:pin-updated', data => {
   if (data.messageId) pinnedMsgs.set(data.chatId, data.messageId);
@@ -1223,44 +1260,50 @@ function updateChannelUI() {
   const footerEl = $('channelFooter');
   const composerWrapEl = $('composer-wrap');
 
+  // Если элементов нет — выходим
   if (!joinEl || !footerEl || !composerWrapEl) return;
 
-  // По умолчанию — всё скрыто, композер показан
+  // ВСЕГДА прячем всё по умолчанию, показываем только нужное
   joinEl.style.display = 'none';
   footerEl.style.display = 'none';
   composerWrapEl.style.display = 'block';
 
   if (!currentChatMeta) return;
 
-  // Если это не канал — выходим
+  // Если это НЕ канал — композер обычный, выходим
   if (currentChatMeta.type !== 'channel') return;
 
   const g = groups.get(currentChatMeta.groupId) || currentChatMeta.group;
   if (!g) return;
 
   const myKey = me ? keyOf(me.username) : '';
-  const isMember = (g.members || []).map(m => keyOf(m)).includes(myKey);
-  const isAdmin = g.owner === myKey || (g.admins || []).map(a => keyOf(a)).includes(myKey);
+  const members = (g.members || []).map(m => keyOf(m));
+  const admins = (g.admins || []).map(a => keyOf(a));
+  const isMember = members.includes(myKey);
+  const isAdmin = g.owner === myKey || admins.includes(myKey);
 
   if (!isMember) {
+    // НЕ подписан → «Присоединиться», композер скрыт
     joinEl.style.display = 'flex';
     composerWrapEl.style.display = 'none';
   } else if (!isAdmin) {
+    // Подписан, но НЕ админ → панель, композер скрыт
     footerEl.style.display = 'flex';
     composerWrapEl.style.display = 'none';
 
-    const muted = muted.has(currentChatMeta.id);
+    const isMuted = muted.has(currentChatMeta.id);
     const label = $('channelMuteLabel');
     const btn = $('channelMuteBtn');
-    if (label) label.textContent = muted ? 'Без звука' : 'Звук';
-    if (btn) btn.classList.toggle('off', muted);
+    if (label) label.textContent = isMuted ? 'Без звука' : 'Звук';
+    if (btn) btn.classList.toggle('off', isMuted);
 
     const infoEl = $('channelFooterInfo');
     if (infoEl) {
-      const n = (g.members || []).length;
+      const n = members.length;
       infoEl.textContent = n + ' ' + plural(n, 'подписчик', 'подписчика', 'подписчиков');
     }
   }
+  // Админ — композер остаётся, всё скрыто
 }
 
 function updateMainHead() {
@@ -3435,71 +3478,63 @@ function renderGlobalSearchResults(query) {
   if (!query || query.length < 2) return;
   const q = query.toLowerCase();
 
-  // 1. Ищем пользователей через сокет
-  socket.emit('users:search', { query }, list => {
-    const users = Array.isArray(list) ? list : [];
+  // 1. Ищем пользователей
+  socket.emit('users:search', { query }, usersList => {
+    const users = Array.isArray(usersList) ? usersList : [];
     const meKey = me ? keyOf(me.username) : '';
     const foundUsers = users.filter(u => u && keyOf(u.username) !== meKey);
 
-    // 2. Ищем каналы и группы — локально, по уже загруженным
-    const foundGroups = [];
-    groups.forEach(g => {
-      const name = (g.name || '').toLowerCase();
-      const desc = (g.description || '').toLowerCase();
-      if (name.includes(q) || desc.includes(q)) {
-        foundGroups.push(g);
+    // 2. Ищем ВСЕ каналы и группы через сервер
+    socket.emit('groups:search', { query }, groupsList => {
+      const allGroups = Array.isArray(groupsList) ? groupsList : [];
+      const foundGroups = allGroups.filter(g => g && g.name);
+
+      if (foundUsers.length === 0 && foundGroups.length === 0) return;
+
+      let html = '';
+
+      if (foundGroups.length > 0) {
+        html += '<div style="padding:8px 12px 6px;font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px;">Каналы и группы</div>';
+        foundGroups.slice(0, 15).forEach(g => {
+          const n = (g.members || []).length;
+          const isChannel = g.type === 'channel';
+          let avaHtml = '';
+          if (g.avatarUrl) avaHtml = `<div class="ava sm" style="background-image:url(${esc(g.avatarUrl)})"></div>`;
+          else avaHtml = `<div class="ava sm" style="background:${g.color || '#a78bfa'}">${isChannel ? '📢' : '👥'}</div>`;
+          html += `<div class="chat-item" data-group-id="${esc(g.id)}" style="cursor:pointer;">${avaHtml}<div class="ci-body"><div class="ci-name">${esc(g.name)}</div><div class="ci-prev">${n} ${plural(n, 'участник', 'участника', 'участников')}${g.description ? ' · ' + esc(g.description.slice(0, 30)) : ''}</div></div></div>`;
+        });
       }
-    });
 
-    if (foundUsers.length === 0 && foundGroups.length === 0) return;
+      if (foundUsers.length > 0) {
+        html += '<div style="padding:8px 12px 6px;font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px;">Люди</div>';
+        foundUsers.slice(0, 10).forEach(u => {
+          let ava = '';
+          if (u.avatarUrl) ava = `<div class="ava sm" style="background-image:url(${esc(u.avatarUrl)})"></div>`;
+          else if (u.avatar && /\p{Emoji}/u.test(u.avatar)) ava = `<div class="ava sm" style="background:${u.color || '#a78bfa'}">${u.avatar}</div>`;
+          else ava = `<div class="ava sm" style="background:${u.color || '#a78bfa'}">${(u.username[0] || '?').toUpperCase()}</div>`;
+          html += `<div class="chat-item" data-username="${esc(u.username)}" style="cursor:pointer;">${ava}<div class="ci-body"><div class="ci-name">${esc(u.username)}${verifyIconsHtml(u)}</div><div class="ci-prev">${u.bio ? esc(u.bio.slice(0, 40)) : 'Нажми, чтобы начать'}</div></div></div>`;
+        });
+      }
 
-    let html = '';
+      c.innerHTML += html;
 
-    // Каналы/группы — выше
-    if (foundGroups.length > 0) {
-      html += '<div style="padding:8px 12px 6px;font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px;">Каналы и группы</div>';
-      foundGroups.slice(0, 10).forEach(g => {
-        const n = (g.members || []).length;
-        const isChannel = g.type === 'channel';
-        let avaHtml = '';
-        if (g.avatarUrl) avaHtml = `<div class="ava sm" style="background-image:url(${esc(g.avatarUrl)})"></div>`;
-        else avaHtml = `<div class="ava sm" style="background:${g.color || '#a78bfa'}">${isChannel ? '📢' : '👥'}</div>`;
-        html += `<div class="chat-item" data-group-id="${esc(g.id)}" style="cursor:pointer;">${avaHtml}<div class="ci-body"><div class="ci-name">${esc(g.name)}</div><div class="ci-prev">${n} ${plural(n, 'участник', 'участника', 'участников')}${g.description ? ' · ' + esc(g.description.slice(0, 30)) : ''}</div></div></div>`;
+      c.querySelectorAll('.chat-item[data-group-id]').forEach(el => {
+        el.onclick = () => {
+          socket.emit('chat:openGroup', { groupId: el.dataset.groupId });
+          if (input) input.value = '';
+          searchQuery = '';
+          if (clear) clear.classList.remove('on');
+        };
       });
-    }
 
-    // Пользователи — ниже
-    if (foundUsers.length > 0) {
-      html += '<div style="padding:8px 12px 6px;font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px;">Люди</div>';
-      foundUsers.slice(0, 10).forEach(u => {
-        let ava = '';
-        if (u.avatarUrl) ava = `<div class="ava sm" style="background-image:url(${esc(u.avatarUrl)})"></div>`;
-        else if (u.avatar && /\p{Emoji}/u.test(u.avatar)) ava = `<div class="ava sm" style="background:${u.color || '#a78bfa'}">${u.avatar}</div>`;
-        else ava = `<div class="ava sm" style="background:${u.color || '#a78bfa'}">${(u.username[0] || '?').toUpperCase()}</div>`;
-        html += `<div class="chat-item" data-username="${esc(u.username)}" style="cursor:pointer;">${ava}<div class="ci-body"><div class="ci-name">${esc(u.username)}${verifyIconsHtml(u)}</div><div class="ci-prev">${u.bio ? esc(u.bio.slice(0, 40)) : 'Нажми, чтобы начать'}</div></div></div>`;
+      c.querySelectorAll('.chat-item[data-username]').forEach(el => {
+        el.onclick = () => {
+          socket.emit('chat:open', { withUsername: el.dataset.username });
+          if (input) input.value = '';
+          searchQuery = '';
+          if (clear) clear.classList.remove('on');
+        };
       });
-    }
-
-    c.innerHTML += html;
-
-    // Обработчики — для групп
-    c.querySelectorAll('.chat-item[data-group-id]').forEach(el => {
-      el.onclick = () => {
-        socket.emit('chat:openGroup', { groupId: el.dataset.groupId });
-        if (input) input.value = '';
-        searchQuery = '';
-        if (clear) clear.classList.remove('on');
-      };
-    });
-
-    // Обработчики — для пользователей
-    c.querySelectorAll('.chat-item[data-username]').forEach(el => {
-      el.onclick = () => {
-        socket.emit('chat:open', { withUsername: el.dataset.username });
-        if (input) input.value = '';
-        searchQuery = '';
-        if (clear) clear.classList.remove('on');
-      };
     });
   });
 }
