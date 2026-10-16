@@ -1315,23 +1315,6 @@ function updateMainHead() {
       if (meta.user.avatarUrl) { avaEl.style.backgroundImage = `url(${meta.user.avatarUrl})`; avaEl.textContent = ''; }
       else { avaEl.style.backgroundImage = ''; avaEl.textContent = (meta.user.avatar && /\p{Emoji}/u.test(meta.user.avatar)) ? meta.user.avatar : (meta.user.username[0] || '?').toUpperCase(); avaEl.style.background = meta.user.color || '#a78bfa'; }
     }
-
-// Клик по шапке канала/группы → профиль
-if ((meta.type === 'channel' || meta.type === 'group') && meta.group) {
-  const nameEl2 = $('mhName');
-  const avaEl2 = $('mhAva');
-  const openHandler = (e) => {
-    e.stopPropagation();
-    const g = groups.get(meta.groupId) || meta.group;
-    if (g) openChannelInfo(g);
-  };
-  [nameEl2, avaEl2].forEach(el => {
-    if (el) {
-      el.style.cursor = 'pointer';
-      el.onclick = openHandler;
-    }
-  });
-}
      
     if (nameEl) nameEl.innerHTML = esc(meta.user.username) + verifyIconsHtml(meta.user);
   if (statusEl) {
@@ -1374,6 +1357,23 @@ if ((meta.type === 'channel' || meta.type === 'group') && meta.group) {
       el.onclick = openHandler;
     });
   }
+     // Клик по шапке канала/группы → профиль канала
+  if ((meta.type === 'channel' || meta.type === 'group') && meta.group) {
+    const nameEl3 = $('mhName');
+    const avaEl3 = $('mhAva');
+    const openHandler = (e) => {
+      e.stopPropagation();
+      const g = groups.get(meta.groupId) || meta.group;
+      if (g) openChannelInfo(g);
+    };
+    [nameEl3, avaEl3].forEach(el => {
+      if (el) {
+        el.style.cursor = 'pointer';
+        el.onclick = openHandler;
+      }
+    });
+  }
+}
 }
 
 function updatePinnedBar() {
