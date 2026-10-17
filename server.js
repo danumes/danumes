@@ -674,12 +674,33 @@ socket.on('group:delete', async ({ groupId }, cb) => {
     socket.emit('chat:opened', result);
   });
 
-socket.on('message:send', async ({ chatId, text, attachments, sticker, stickerUrl }, cb) => {
+  socket.on('message:send', async ({ chatId, text, attachments, sticker, stickerUrl, scheduledFor }, cb) => {
     let me = users.get(socket.id);
     if (!me) { const tok = socket.handshake?.auth?.token; if (tok) { const row = await tryAuthByToken(socket, tok); if (row) me = users.get(socket.id); } }
     if (!me) return cb && cb({ ok: false, error: 'not-auth' });
     if (!(await canAccessChat(chatId, me.usernameLower))) return cb && cb({ ok: false, error: 'no-access' });
     if (!(await canWriteToChat(chatId, me.usernameLower))) return cb && cb({ ok: false, error: 'Только администраторы могут публиковать сообщения' });
+         // Если админ откладывает пост в канал/группу
+    const isChannelOrGroup = chatId.startsWith('g_');
+    if (isChannelOrGroup && scheduledFor && scheduledFor > Date.now()) {
+      // Проверяем, что юзер админ
+      const isAdm = await isGroupAdmin(chatId, me.usernameLower);
+      if (!isAdm) return cb && cb({ ok: false, error: 'Только админы могут откладывать посты' });
+
+      const id = uid('m');
+      const time = Date.now();
+      let clean = String(text || '').trim().slice(0, 4000);
+      const hadBad = hasBadWords(clean);
+      if (hadBad) clean = filterBadWords(clean);
+
+      await dbRun(
+        `INSERT INTO messages (id, chat_id, type, user_id, username, color, avatar, avatar_url, text, time, attachments, sticker, sticker_url, reactions, reply_to, edited, deleted, deleted_for, censored, scheduled_for) VALUES (?, ?, 'user', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', NULL, 0, 0, '[]', ?, ?)`,
+        [id, chatId, me.usernameLower, me.username, me.color, me.avatar, me.avatarUrl, clean, time, attachments ? JSON.stringify(attachments) : null, sticker || null, stickerUrl || null, hadBad ? 1 : 0, scheduledFor]
+      );
+
+      if (cb) cb({ ok: true, scheduled: true, scheduledFor });
+      return;
+    }
     let clean = String(text || '').trim().slice(0, 4000);
 if (!clean && (!attachments || attachments.length === 0) && !sticker && !stickerUrl) {
   return cb && cb({ ok: false, error: 'empty' });
@@ -1526,6 +1547,7 @@ async function startServer() {
   try {
     console.log('▶️  initTables...');
     await initTables();
+    await restoreScheduledMessages();
     console.log('✅ initTables OK');
   } catch (e) {
     console.error('❌ initTables FAIL:', e.message);
@@ -1543,6 +1565,43 @@ async function startServer() {
   server.on('error', (err) => {
     console.error('❌ Server error:', err.message);
   });
+}
+
+/* ---------- ВОССТАНОВЛЕНИЕ ОТЛОЖЕННЫХ СООБЩЕНИЙ ---------- */
+async function restoreScheduledMessages() {
+  try {
+    const rows = await dbAll('SELECT * FROM messages WHERE scheduled_for IS NOT NULL AND scheduled_for > ?', [Date.now()]);
+    console.log(`📅 Восстановлено ${rows.length} отложенных сообщений`);
+    for (const row of rows) {
+      scheduleMessage(row);
+    }
+  } catch (e) {
+    console.error('restoreScheduledMessages:', e.message);
+  }
+}
+
+function scheduleMessage(row) {
+  const delay = row.scheduled_for - Date.now();
+  if (delay <= 0) {
+    publishScheduledMessage(row.id);
+    return;
+  }
+  setTimeout(() => publishScheduledMessage(row.id), delay);
+}
+
+async function publishScheduledMessage(msgId) {
+  try {
+    const row = await dbGet('SELECT * FROM messages WHERE id=?', [msgId]);
+    if (!row || !row.scheduled_for) return;
+    
+    // Публикуем
+    await dbRun('UPDATE messages SET scheduled_for=NULL WHERE id=?', [msgId]);
+    const saved = await dbGet('SELECT * FROM messages WHERE id=?', [msgId]);
+    await emitToChat(saved.chat_id, 'message', msgFromDb(saved));
+    console.log(`📤 Опубликовано отложенное сообщение ${msgId}`);
+  } catch (e) {
+    console.error('publishScheduledMessage:', e.message);
+  }
 }
 
 startServer().catch(err => {
