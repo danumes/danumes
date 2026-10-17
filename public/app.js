@@ -2247,6 +2247,10 @@ function openChannelInfo(g) {
   $('cpEditBtn') && ($('cpEditBtn').onclick = () => {
     openChannelEdit(g);
   });
+
+  $('cpAdminsBtn') && ($('cpAdminsBtn').onclick = () => {
+    openAdminManager(g);
+  });
    
   $('cpJoinBtn') && ($('cpJoinBtn').onclick = () => {
     socket.emit('group:join', { groupId: g.id }, res => {
@@ -2260,7 +2264,7 @@ function openChannelInfo(g) {
   });
 }
 
-  $('cpAdminsBtn') && ($('cpAdminsBtn').onclick = () => {
+  
     openAdminManager(g);
   });
 
