@@ -1462,15 +1462,7 @@ function sendMessage() {
   }
   if (!text && pendingAttachments.length === 0) return;
   if (!currentChatId) return;
-   // Определяем тип действия для "следов"
-if (pendingAttachments.length > 0) {
-  const first = pendingAttachments[0];
-  if (first.type && first.type.startsWith('image/')) sendPresence('photo');
-  else if (first.type && first.type.startsWith('video/')) sendPresence('video');
-  else if (first.type && first.type.startsWith('audio/')) sendPresence('voice');
-  else sendPresence('file');
-} else {
-}
+   
   socket.emit('message:send', {
     chatId: currentChatId,
     text: text,
