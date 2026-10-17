@@ -2172,8 +2172,16 @@ function openChannelInfo(g) {
   }
 
   // Кнопка "Редактировать" — только админ/владелец
+  // Кнопки действий
   let actionsHtml = '';
-  if (isAdmin) {
+  if (isOwner) {
+    // Владелец: и редактировать, и управлять админами
+    actionsHtml = `<div class="up-actions">
+      <button class="up-btn primary" id="cpEditBtn">✏️ Редактировать</button>
+      <button class="up-btn" id="cpAdminsBtn">👑 Управление админами</button>
+    </div>`;
+  } else if (isAdmin) {
+    // Админ (не владелец): только редактировать
     actionsHtml = `<div class="up-actions">
       <button class="up-btn primary" id="cpEditBtn">✏️ Редактировать</button>
     </div>`;
@@ -2252,9 +2260,113 @@ function openChannelInfo(g) {
   });
 }
 
+  $('cpAdminsBtn') && ($('cpAdminsBtn').onclick = () => {
+    openAdminManager(g);
+  });
+
 function closeChannelProfile() {
   const modal = $('channelProfileModal');
   if (modal) modal.classList.remove('on');
+}
+
+/* ============================================================
+   УПРАВЛЕНИЕ АДМИНАМИ КАНАЛА
+   ============================================================ */
+function openAdminManager(g) {
+  if (!g) return;
+  const modal = $('channelProfileModal');
+  const body = $('cpBody');
+  const title = $('cpTitle');
+  if (!modal || !body) return;
+
+  if (title) title.textContent = 'Админы: ' + g.name;
+
+  const myKey = me ? keyOf(me.username) : '';
+  const members = (g.members || []).map(m => keyOf(m));
+  const admins = (g.admins || []).map(a => keyOf(a));
+  const isOwner = g.owner === myKey;
+
+  if (!isOwner) {
+    body.innerHTML = '<div class="up-error">Только владелец может управлять админами</div>';
+    return;
+  }
+
+  // Заголовок и кнопка Назад
+  let html = `<div class="up-actions" style="padding: 0 0 10px;">
+    <button class="up-btn" id="cpBackBtn">← Назад в профиль</button>
+  </div>`;
+
+  html += `<div class="up-section">
+    <div class="up-section-title">УЧАСТНИКИ (${members.length})</div>
+    <div class="admin-manager-list" style="display:flex; flex-direction:column; gap:6px;">`;
+
+  members.forEach(key => {
+    const user = usersMap.get(key);
+    const username = user ? user.username : key;
+    const color = user ? (user.color || '#a78bfa') : '#a78bfa';
+    const avaUrl = user ? user.avatarUrl : null;
+    const avaEmoji = user ? user.avatar : null;
+
+    const isTargetOwner = key === g.owner;
+    const isTargetAdmin = admins.includes(key);
+
+    let avaHtml = '';
+    if (avaUrl) avaHtml = `<div class="ava sm" style="background-image:url(${esc(avaUrl)})"></div>`;
+    else if (avaEmoji && /\p{Emoji}/u.test(avaEmoji)) avaHtml = `<div class="ava sm" style="background:${color}">${avaEmoji}</div>`;
+    else avaHtml = `<div class="ava sm" style="background:${color}">${(username[0] || '?').toUpperCase()}</div>`;
+
+    const badge = isTargetOwner
+      ? `<span class="admin-badge owner">Владелец</span>`
+      : (isTargetAdmin ? `<span class="admin-badge">Админ</span>` : '');
+
+    const actionBtn = isTargetOwner
+      ? ''
+      : `<button class="admin-toggle-btn ${isTargetAdmin ? 'remove' : 'add'}"
+           data-username="${esc(username)}"
+           data-is-admin="${isTargetAdmin ? '1' : '0'}">
+           ${isTargetAdmin ? 'Снять' : 'Сделать админом'}
+         </button>`;
+
+    html += `<div class="admin-manager-row">
+      ${avaHtml}
+      <div class="admin-manager-info">
+        <div class="admin-manager-name">${esc(username)} ${badge}</div>
+      </div>
+      ${actionBtn}
+    </div>`;
+  });
+
+  html += `</div></div>`;
+
+  body.innerHTML = html;
+
+  // Кнопка Назад
+  $('cpBackBtn') && ($('cpBackBtn').onclick = () => {
+    openChannelInfo(g);
+  });
+
+  // Кнопки назначения
+  body.querySelectorAll('.admin-toggle-btn').forEach(btn => {
+    btn.onclick = () => {
+      const targetUsername = btn.dataset.username;
+      const wasAdmin = btn.dataset.isAdmin === '1';
+      btn.disabled = true;
+      socket.emit('group:set-admin', {
+        groupId: g.id,
+        targetUsername,
+        isAdmin: !wasAdmin
+      }, res => {
+        btn.disabled = false;
+        if (res && res.ok) {
+          toast(wasAdmin ? '✅ Админ снят' : '👑 Админ назначен');
+          const updatedGroup = groups.get(g.id);
+          if (updatedGroup) openAdminManager(updatedGroup);
+        } else {
+          toast('❌ ' + (res?.error || 'Не удалось'));
+        }
+      });
+    };
+  });
 }
 
 /* ============================================================
