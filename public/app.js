@@ -1276,6 +1276,16 @@ function updateChannelUI() {
   const g = groups.get(currentChatMeta.groupId) || currentChatMeta.group;
   if (!g) return;
 
+  // Показываем кнопку отложки только админам в каналах
+  const scheduleBtn = $('btnSchedule');
+  if (scheduleBtn) {
+    if (currentChatMeta.type === 'channel' && isAdmin) {
+      scheduleBtn.style.display = 'flex';
+    } else {
+      scheduleBtn.style.display = 'none';
+    }
+  }
+   
   const myKey = me ? keyOf(me.username) : '';
   const members = (g.members || []).map(m => keyOf(m));
   const admins = (g.admins || []).map(a => keyOf(a));
@@ -2366,6 +2376,68 @@ function openAdminManager(g) {
         }
       });
     };
+  });
+}
+
+/* ============================================================
+   ОТЛОЖЕННЫЕ ПОСТЫ
+   ============================================================ */
+function initScheduledPosts() {
+  const btn = $('btnSchedule');
+  const modal = $('scheduledModal');
+  if (!btn || !modal) return;
+
+  // Открытие модалки
+  btn.onclick = () => {
+    if (!currentChatId) return;
+    
+    // Ставим сегодняшнюю дату по умолчанию
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + 5); // +5 минут от текущего
+    const dateStr = now.toISOString().split('T')[0];
+    const timeStr = now.toTimeString().slice(0, 5);
+    
+    if ($('schedDate')) $('schedDate').value = dateStr;
+    if ($('schedTime')) $('schedTime').value = timeStr;
+    if ($('schedErr')) $('schedErr').classList.remove('on');
+    
+    modal.classList.add('on');
+  };
+
+  // Закрытие
+  $('schedCloseBtn') && ($('schedCloseBtn').onclick = () => modal.classList.remove('on'));
+  $('schedCancel') && ($('schedCancel').onclick = () => modal.classList.remove('on'));
+
+  // Сохранение
+  $('schedSave') && ($('schedSave').onclick = () => {
+    const dateVal = $('schedDate')?.value;
+    const timeVal = $('schedTime')?.value;
+    const err = $('schedErr');
+    if (err) err.classList.remove('on');
+
+    if (!dateVal || !timeVal) {
+      if (err) { err.textContent = 'Заполни дату и время'; err.classList.add('on'); }
+      return;
+    }
+
+    const scheduledTime = new Date(dateVal + 'T' + timeVal).getTime();
+    if (scheduledTime <= Date.now()) {
+      if (err) { err.textContent = 'Время должно быть в будущем'; err.classList.add('on'); }
+      return;
+    }
+
+    // Сохраняем время
+    scheduledFor = scheduledTime;
+    
+    // Закрываем модалку
+    modal.classList.remove('on');
+    
+    // Показываем тост, что пост отложен (он отправится при нажатии кнопки Отправить)
+    const d = new Date(scheduledTime);
+    toast(`⏰ Отложено на ${d.toLocaleDateString('ru-RU')} ${d.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})}. Нажми Отправить, чтобы запланировать.`);
+    
+    // Опционально: можно сразу вызывать sendMessage(), чтобы не заставлять юзера жать "Отправить"
+    // Но лучше оставить выбор за юзером.
   });
 }
 
@@ -4240,7 +4312,8 @@ function initAll() {
   initImageViewer();
   initMessageInteractions();
   initHotkeys();
-
+  initScheduledPosts();
+   
      // Кнопка закрытия профиля
   $('upClose') && ($('upClose').onclick = closeUserProfile);
   document.querySelectorAll('.emoji-tabs button').forEach(b => b.onclick = () => renderEmojiTab(b.dataset.emojiTab));
