@@ -101,6 +101,7 @@ async function initTables() {
     CREATE TABLE IF NOT EXISTS sticker_packs (id TEXT PRIMARY KEY, owner TEXT NOT NULL, name TEXT NOT NULL, description TEXT DEFAULT '', cover_url TEXT, created_at INTEGER NOT NULL, is_public INTEGER DEFAULT 1);
     CREATE TABLE IF NOT EXISTS stickers (id TEXT PRIMARY KEY, pack_id TEXT NOT NULL, url TEXT NOT NULL, emoji TEXT DEFAULT '🎨', position INTEGER DEFAULT 0, created_at INTEGER);
     CREATE TABLE IF NOT EXISTS broadcasts (id TEXT PRIMARY KEY, text TEXT, from_username TEXT, time INTEGER, sent_to INTEGER);
+    CREATE TABLE IF NOT EXISTS post_comments (post_id TEXT PRIMARY KEY, chat_id TEXT NOT NULL);
   `;
   const statements = schema.split(';').map(s => s.trim()).filter(s => s.length > 0);
   for (const stmt of statements) {
@@ -674,6 +675,64 @@ socket.on('group:delete', async ({ groupId }, cb) => {
     socket.emit('chat:opened', result);
   });
 
+  socket.on('post:get-comments', async ({ postId, channelId }, cb) => {
+    try {
+      const me = users.get(socket.id);
+      if (!me) return cb && cb({ ok: false, error: 'not-auth' });
+
+      // Ищем, есть ли уже ветка для этого поста
+      let row = await dbGet('SELECT * FROM post_comments WHERE post_id=?', [postId]);
+      let commentChatId;
+
+      if (row) {
+        commentChatId = row.chat_id;
+      } else {
+        // Создаём новую ветку (group), привязанную к каналу
+        commentChatId = 'c_' + postId; // префикс c_ означает "comments"
+        await dbRun('INSERT INTO post_comments (post_id, chat_id) VALUES (?, ?)', [postId, commentChatId]);
+        
+        // Создаём саму "группу" для комментариев
+        await dbRun(
+          'INSERT OR IGNORE INTO groups_t (id, name, description, type, owner, color, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [commentChatId, 'Комментарии', 'Обсуждение поста', 'group', me.usernameLower, '#a78bfa', Date.now()]
+        );
+        
+        // Подписываем в эту группу всех, кто есть в канале
+        const members = await dbAll('SELECT username FROM group_members WHERE group_id=?', [channelId]);
+        for (const m of members) {
+          await dbRun('INSERT OR IGNORE INTO group_members (group_id, username, is_admin) VALUES (?, ?, ?)', [commentChatId, m.username, m.username === me.usernameLower ? 1 : 0]);
+        }
+        
+        // Обязательно добавляем создателя (того, кто первым нажал "Обсудить")
+        await dbRun('INSERT OR IGNORE INTO group_members (group_id, username, is_admin) VALUES (?, ?, 1)', [commentChatId, me.usernameLower]);
+      }
+
+      // Открываем этот чат
+      const g = await getGroup(commentChatId);
+      const messages = await getChatMessages(commentChatId);
+      
+      const result = { ok: true, chatId: commentChatId, messages, group: g, chatType: 'group', isCommentThread: true, postId };
+      if (cb) cb(result);
+      socket.emit('chat:opened', result);
+      
+    } catch (e) {
+      console.error('post:get-comments', e);
+      if (cb) cb({ ok: false, error: 'server-error' });
+    }
+  });
+
+  // Счётчик комментариев для поста
+  socket.on('post:count-comments', async ({ postId }, cb) => {
+    try {
+      const row = await dbGet('SELECT chat_id FROM post_comments WHERE post_id=?', [postId]);
+      if (!row) return cb && cb({ count: 0 });
+      const r = await dbGet('SELECT COUNT(*) as cnt FROM messages WHERE chat_id=? AND deleted=0', [row.chat_id]);
+      if (cb) cb({ count: r ? r.cnt : 0 });
+    } catch (e) {
+      if (cb) cb({ count: 0 });
+    }
+  });
+   
   socket.on('message:send', async ({ chatId, text, attachments, sticker, stickerUrl, scheduledFor }, cb) => {
     let me = users.get(socket.id);
     if (!me) { const tok = socket.handshake?.auth?.token; if (tok) { const row = await tryAuthByToken(socket, tok); if (row) me = users.get(socket.id); } }
@@ -713,6 +772,20 @@ if (!clean && (!attachments || attachments.length === 0) && !sticker && !sticker
   [id, chatId, me.usernameLower, me.username, me.color, me.avatar, me.avatarUrl, clean, time, attachments ? JSON.stringify(attachments) : null, sticker || null, stickerUrl || null, hadBad ? 1 : 0]);
     const saved = await dbGet('SELECT * FROM messages WHERE id=?', [id]);
     await emitToChat(chatId, 'message', msgFromDb(saved));
+         // Если это ветка комментариев — обновляем счётчик в канале
+    if (chatId.startsWith('c_')) {
+      const postId = chatId.replace('c_', '');
+      const pcRow = await dbGet('SELECT * FROM post_comments WHERE post_id=?', [postId]);
+      if (pcRow) {
+        // Ищем пост в канале
+        const postRow = await dbGet('SELECT * FROM messages WHERE id=?', [postId]);
+        if (postRow) {
+          const cnt = await dbGet('SELECT COUNT(*) as cnt FROM messages WHERE chat_id=? AND deleted=0', [chatId]);
+          // Эмитим всем участникам канала обновление
+          emitToUser(postRow.user_id, 'post:comment-count', { postId, count: cnt ? cnt.cnt : 0 });
+        }
+      }
+    }
     if (cb) cb({ ok: true, msg: msgFromDb(saved) });
   });
 
