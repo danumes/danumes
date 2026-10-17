@@ -787,6 +787,11 @@ socket.on('message:undo-delete', data => {
   hideUndoDeleteToast();
 });
 
+socket.on('post:comment-count', data => {
+  const el = $('msgs')?.querySelector(`.post-comment-count[data-post-id="${data.postId}"]`);
+  if (el) el.textContent = data.count || 0;
+});
+
 /* ============================================================
    ПРОФИЛЬ UI
    ============================================================ */
@@ -1045,6 +1050,13 @@ function buildMsg(msg, prevMsg) {
   }
 
   const displayText = msg.deleted ? '<i>Сообщение удалено</i>' : textHtml;
+     // Кнопка "Обсудить" для постов в канале
+  let discussHtml = '';
+  if (currentChatMeta && currentChatMeta.type === 'channel' && !isOwn && !msg.deleted && msg.type !== 'system') {
+    discussHtml = `<button class="post-discuss-btn" data-post-id="${msg.id}">
+      💬 <span class="post-comment-count" data-post-id="${msg.id}">0</span>
+    </button>`;
+  }
   const cls = [msg.edited ? 'edited' : '', msg.deleted ? 'deleted' : ''].join(' ');
 
   return `<div class="msg ${isOwn ? 'own' : ''} ${isFirst ? 'first' : ''}" data-id="${msg.id}" data-user="${esc(keyOf(msg.userId))}">
@@ -1054,6 +1066,7 @@ function buildMsg(msg, prevMsg) {
       <div class="bubble ${cls}">
         ${replyHtml}${stickerHtml}${pollHtml}${callHtml}${attachmentsHtml}${displayText}
         ${!msg.deleted ? `<span class="bubble-time">${time} ${readStatus}</span>` : ''}
+        ${discussHtml}
       </div>
       ${reactionsHtml}
     </div>
@@ -1088,6 +1101,16 @@ function renderAllMessages() {
   c.querySelectorAll('.link-preview-wrap').forEach(pw => {
     if (pw.dataset.previewUrl) renderLinkPreview(pw, pw.dataset.previewUrl);
   });
+     // Подгружаем счётчики комментариев для постов в канале
+  if (currentChatMeta && currentChatMeta.type === 'channel') {
+    c.querySelectorAll('.post-discuss-btn').forEach(btn => {
+      const postId = btn.dataset.postId;
+      socket.emit('post:count-comments', { postId }, res => {
+        const countEl = c.querySelector(`.post-comment-count[data-post-id="${postId}"]`);
+        if (countEl && res) countEl.textContent = res.count || 0;
+      });
+    });
+  }
 }
 
 function updateMessageInDOM(msg) {
@@ -1795,6 +1818,23 @@ if (voiceBtn) {
 
   // Останавливаем запись, когда отпускаем кнопку мыши (для одиночного клика)
   document.addEventListener('click', e => {
+         // Кнопка "Обсудить" под постом в канале
+    const discussBtn = e.target.closest('.post-discuss-btn');
+    if (discussBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const postId = discussBtn.dataset.postId;
+      const channelId = currentChatId;
+      socket.emit('post:get-comments', { postId, channelId }, res => {
+        if (res && res.ok) {
+          // Открываем этот чат
+          socket.emit('chat:openGroup', { groupId: res.chatId });
+        } else {
+          toast('❌ ' + (res?.error || 'Не удалось открыть комментарии'));
+        }
+      });
+      return;
+    }
     if (voiceRecordingStarted && e.target !== voiceBtn && !voiceBtn.contains(e.target)) {
       stopVoiceOrCircle();
       voiceRecordingStarted = false;
@@ -4487,6 +4527,8 @@ $('railCallBtn') && ($('railCallBtn').onclick = () => {
     return origOpen.call(this, url, ...args);
   };
 })();
+
+
 /* ============================================================
    КОНЕЦ ФАЙЛА app.js
    ============================================================ */
