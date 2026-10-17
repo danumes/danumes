@@ -535,6 +535,49 @@ socket.on('group:delete', async ({ groupId }, cb) => {
     if (cb) cb({ ok: false, error: 'server-error' });
   }
 });
+
+  socket.on('group:set-admin', async ({ groupId, targetUsername, isAdmin }, cb) => {
+    try {
+      const me = users.get(socket.id);
+      if (!me) return cb && cb({ ok: false, error: 'not-auth' });
+
+      const g = await dbGet('SELECT * FROM groups_t WHERE id=?', [groupId]);
+      if (!g) return cb && cb({ ok: false, error: 'no-group' });
+
+      // Только владелец может назначать админов
+      if (g.owner !== me.usernameLower) {
+        return cb && cb({ ok: false, error: 'Только владелец может назначать админов' });
+      }
+
+      const targetKey = String(targetUsername || '').toLowerCase().trim();
+      if (!targetKey) return cb && cb({ ok: false, error: 'no-target' });
+
+      // Нельзя менять права самого владельца
+      if (targetKey === g.owner) {
+        return cb && cb({ ok: false, error: 'Владелец всегда админ' });
+      }
+
+      // Проверяем что пользователь существует и в группе
+      const memberRow = await dbGet('SELECT * FROM group_members WHERE group_id=? AND username=?', [groupId, targetKey]);
+      if (!memberRow) return cb && cb({ ok: false, error: 'Пользователь не в группе' });
+
+      // Меняем флаг is_admin
+      await dbRun('UPDATE group_members SET is_admin=? WHERE group_id=? AND username=?', [isAdmin ? 1 : 0, groupId, targetKey]);
+
+      const updated = await getGroup(groupId);
+      if (cb) cb({ ok: true, group: updated });
+
+      // Оповещаем всех
+      for (const m of (updated.members || [])) {
+        emitToUser(m, 'group:updated', updated);
+      }
+
+      console.log(`👑 group:set-admin ${targetKey} ${isAdmin ? '→ админ' : '→ не админ'} в ${groupId}`);
+    } catch (e) {
+      console.error('group:set-admin', e);
+      if (cb) cb({ ok: false, error: 'server-error' });
+    }
+  });
    
   socket.on('auth:login', async ({ login, password }, cb) => {
     try {
