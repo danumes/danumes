@@ -3348,5 +3348,97 @@ div[style*="tatnet.ru"] {
 }
 
 /* ============================================================
+   УПРАВЛЕНИЕ АДМИНАМИ
+   ============================================================ */
+.admin-manager-list {
+  margin-top: 6px;
+}
+
+.admin-manager-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-3);
+  border-radius: 10px;
+}
+
+.admin-manager-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-manager-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(167, 139, 250, 0.18);
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.admin-badge.owner {
+  background: rgba(251, 191, 36, 0.18);
+  color: #fbbf24;
+}
+
+.admin-toggle-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--bg-4);
+  color: var(--text-2);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.admin-toggle-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.admin-toggle-btn.add {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.admin-toggle-btn.add:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.admin-toggle-btn.remove {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger);
+}
+
+.admin-toggle-btn.remove:hover {
+  background: rgba(239, 68, 68, 0.28);
+}
+
+.admin-toggle-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============================================================
    КОНЕЦ
    ============================================================ */
