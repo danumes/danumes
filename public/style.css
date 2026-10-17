@@ -3446,6 +3446,28 @@ div[style*="tatnet.ru"] {
   background: var(--accent-soft);
 }
 
+.post-discuss-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(167, 139, 250, 0.15);
+  color: var(--accent);
+  font-size: 12.5px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.post-discuss-btn:hover {
+  background: rgba(167, 139, 250, 0.25);
+}
+.post-comment-count {
+  font-weight: 700;
+}
+
 /* ============================================================
    КОНЕЦ
    ============================================================ */
