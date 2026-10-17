@@ -1275,16 +1275,6 @@ function updateChannelUI() {
 
   const g = groups.get(currentChatMeta.groupId) || currentChatMeta.group;
   if (!g) return;
-
-  // Показываем кнопку отложки только админам в каналах
-  const scheduleBtn = $('btnSchedule');
-  if (scheduleBtn) {
-    if (currentChatMeta.type === 'channel' && isAdmin) {
-      scheduleBtn.style.display = 'flex';
-    } else {
-      scheduleBtn.style.display = 'none';
-    }
-  }
    
   const myKey = me ? keyOf(me.username) : '';
   const members = (g.members || []).map(m => keyOf(m));
@@ -1314,6 +1304,14 @@ function updateChannelUI() {
     }
   }
   // Админ — композер остаётся, всё скрыто
+     const scheduleBtn = $('btnSchedule');
+  if (scheduleBtn) {
+    if (currentChatMeta.type === 'channel' && isAdmin) {
+      scheduleBtn.style.display = 'flex';
+    } else {
+      scheduleBtn.style.display = 'none';
+    }
+  }
 }
 
 function updateMainHead() {
