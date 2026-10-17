@@ -2264,10 +2264,6 @@ function openChannelInfo(g) {
   });
 }
 
-  
-    openAdminManager(g);
-  });
-
 function closeChannelProfile() {
   const modal = $('channelProfileModal');
   if (modal) modal.classList.remove('on');
