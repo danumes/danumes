@@ -2143,6 +2143,20 @@ function openChannelInfo(g) {
   // Счётчик
   const n = members.length;
   const countText = n + ' ' + plural(n, 'подписчик', 'подписчика', 'подписчиков');
+     // Медиа из канала — берём последние 6 картинок/видео
+  const chatMsgs = messagesByChat.get(g.id) || [];
+  const mediaItems = [];
+  for (let i = chatMsgs.length - 1; i >= 0 && mediaItems.length < 6; i--) {
+    const m = chatMsgs[i];
+    if (!m.attachments || !m.attachments.length) continue;
+    for (const att of m.attachments) {
+      if (!att.type) continue;
+      if (att.type.startsWith('image/') || att.type.startsWith('video/')) {
+        mediaItems.push(att);
+        if (mediaItems.length >= 6) break;
+      }
+    }
+  }
 
   // Описание
   const bioHtml = g.description
@@ -2178,6 +2192,23 @@ function openChannelInfo(g) {
   }
 
   body.innerHTML = `
+    // HTML для медиа-сетки
+  let mediaHtml = '';
+  if (mediaItems.length > 0) {
+    mediaHtml = `<div class="up-section">
+      <div class="up-section-title">МЕДИА</div>
+      <div class="channel-media-grid">
+        ${mediaItems.map((att, idx) => {
+          const isVideo = att.type.startsWith('video/');
+          return `<div class="channel-media-item" data-media-idx="${idx}">
+            ${isVideo 
+              ? `<video src="${esc(att.url)}" muted preload="metadata"></video><span class="channel-media-play">▶</span>`
+              : `<img src="${esc(att.url)}" loading="lazy" />`}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
     <div class="up-hero">
       ${avaHtml}
       <div class="up-name">${esc(g.name)}</div>
@@ -2190,10 +2221,27 @@ function openChannelInfo(g) {
       <div class="up-info-row">👥 <span>${countText}</span></div>
       <div class="up-info-row">👑 <span>${admins.length || 1} ${plural(admins.length || 1, 'админ', 'админа', 'админов')}</span></div>
     </div>
+    ${mediaHtml}
     ${bioHtml}
   `;
 
   modal.classList.add('on');
+    // Клик по медиа → просмотр
+  document.querySelectorAll('#cpBody .channel-media-item').forEach(el => {
+    el.onclick = (e) => {
+      e.stopPropagation();
+      const idx = parseInt(el.dataset.mediaIdx, 10);
+      const att = mediaItems[idx];
+      if (!att) return;
+      if (att.type.startsWith('image/')) {
+        const v = $('imgViewer'), i = $('imgViewerImg');
+        if (v && i) { i.src = att.url; v.classList.add('on'); }
+      } else {
+        // Для видео — открываем в новой вкладке
+        window.open(att.url, '_blank');
+      }
+    };
+  });
 
   // Привязка кнопок
   $('cpEditBtn') && ($('cpEditBtn').onclick = () => {
