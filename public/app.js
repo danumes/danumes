@@ -2191,8 +2191,6 @@ function openChannelInfo(g) {
     </div>`;
   }
 
-  body.innerHTML = `
-    // HTML для медиа-сетки
   let mediaHtml = '';
   if (mediaItems.length > 0) {
     mediaHtml = `<div class="up-section">
@@ -2209,6 +2207,8 @@ function openChannelInfo(g) {
       </div>
     </div>`;
   }
+   
+  body.innerHTML = `
     <div class="up-hero">
       ${avaHtml}
       <div class="up-name">${esc(g.name)}</div>
