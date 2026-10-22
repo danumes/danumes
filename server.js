@@ -79,7 +79,7 @@ async function initTables() {
     CREATE TABLE IF NOT EXISTS accounts (username TEXT PRIMARY KEY, username_display TEXT NOT NULL, password_hash TEXT NOT NULL, bio TEXT DEFAULT '', birthday TEXT DEFAULT '', email TEXT DEFAULT '', email_verified INTEGER DEFAULT 0, phone TEXT DEFAULT '', phone_verified INTEGER DEFAULT 0, color TEXT NOT NULL, avatar TEXT, avatar_url TEXT, created_at INTEGER NOT NULL, is_admin INTEGER DEFAULT 0, is_verified INTEGER DEFAULT 0, is_banned INTEGER DEFAULT 0, ban_reason TEXT DEFAULT '', banned_at INTEGER, vk_linked INTEGER DEFAULT 0, google_id TEXT, google_email TEXT, email_login_created INTEGER DEFAULT 0, vk_oauth_created INTEGER DEFAULT 0);
     CREATE TABLE IF NOT EXISTS messages (id TEXT PRIMARY KEY, chat_id TEXT NOT NULL, type TEXT DEFAULT 'user', user_id TEXT, username TEXT, color TEXT, avatar TEXT, avatar_url TEXT, text TEXT DEFAULT '', time INTEGER NOT NULL, reactions TEXT DEFAULT '{}', reply_to TEXT, edited INTEGER DEFAULT 0, deleted INTEGER DEFAULT 0, deleted_for TEXT DEFAULT '[]', attachments TEXT, sticker TEXT, sticker_url TEXT, sticker_id TEXT, mentions TEXT, poll TEXT, censored INTEGER DEFAULT 0, call_type TEXT, call_status TEXT, duration INTEGER, forwarded_from TEXT, scheduled_for INTEGER, pending_delete INTEGER DEFAULT 0, pending_delete_at INTEGER);
     CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(chat_id, time);
-    CREATE TABLE IF NOT EXISTS groups_t (id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT DEFAULT '', rules TEXT DEFAULT '', avatar_url TEXT, type TEXT DEFAULT 'group', owner TEXT NOT NULL, color TEXT NOT NULL, created_at INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS groups_t (id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT DEFAULT '', rules TEXT DEFAULT '', avatar_url TEXT, type TEXT DEFAULT 'group', owner TEXT NOT NULL, color TEXT NOT NULL, created_at INTEGER NOT NULL, comments_enabled INTEGER DEFAULT 1);
     CREATE TABLE IF NOT EXISTS group_members (group_id TEXT NOT NULL, username TEXT NOT NULL, is_admin INTEGER DEFAULT 0, PRIMARY KEY (group_id, username));
     CREATE TABLE IF NOT EXISTS settings (username TEXT PRIMARY KEY, data TEXT DEFAULT '{}');
     CREATE TABLE IF NOT EXISTS sessions (sid TEXT PRIMARY KEY, username TEXT NOT NULL, joined_at INTEGER, last_active INTEGER, ua TEXT, token TEXT UNIQUE, expires_at INTEGER);
@@ -102,6 +102,7 @@ async function initTables() {
     CREATE TABLE IF NOT EXISTS stickers (id TEXT PRIMARY KEY, pack_id TEXT NOT NULL, url TEXT NOT NULL, emoji TEXT DEFAULT '🎨', position INTEGER DEFAULT 0, created_at INTEGER);
     CREATE TABLE IF NOT EXISTS broadcasts (id TEXT PRIMARY KEY, text TEXT, from_username TEXT, time INTEGER, sent_to INTEGER);
     CREATE TABLE IF NOT EXISTS post_comments (post_id TEXT PRIMARY KEY, chat_id TEXT NOT NULL);
+    
   `;
   const statements = schema.split(';').map(s => s.trim()).filter(s => s.length > 0);
   for (const stmt of statements) {
@@ -110,6 +111,8 @@ async function initTables() {
   }
   console.log('✅ Таблицы инициализированы');
 }
+
+  try { await db.execute("ALTER TABLE groups_t ADD COLUMN comments_enabled INTEGER DEFAULT 1"); } catch (e) {}
 
 /* ---------- EXPRESS ---------- */
 const app = express();
@@ -463,7 +466,7 @@ socket.on('group:leave', async ({ groupId }, cb) => {
   }
 });
 
-socket.on('group:update', async ({ groupId, name, description, avatarUrl }, cb) => {
+  socket.on('group:update', async ({ groupId, name, description, avatarUrl, commentsEnabled }, cb) => {
   try {
     const me = users.get(socket.id);
     if (!me) return cb && cb({ ok: false, error: 'not-auth' });
@@ -490,6 +493,10 @@ socket.on('group:update', async ({ groupId, name, description, avatarUrl }, cb) 
       updates.push('avatar_url=?'); args.push(avatarUrl || null);
     }
 
+    if (typeof commentsEnabled === 'boolean') {
+      updates.push('comments_enabled=?'); args.push(commentsEnabled ? 1 : 0);
+    }
+     
     if (updates.length === 0) return cb && cb({ ok: true, unchanged: true });
 
     args.push(groupId);
@@ -694,7 +701,7 @@ socket.on('group:delete', async ({ groupId }, cb) => {
         // Создаём саму "группу" для комментариев
         await dbRun(
           'INSERT OR IGNORE INTO groups_t (id, name, description, type, owner, color, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-          [commentChatId, 'Комментарии', 'Обсуждение поста', 'group', me.usernameLower, '#a78bfa', Date.now()]
+          [commentChatId, '💬 Комментарии', '', 'group', me.usernameLower, '#a78bfa', Date.now()]
         );
         
         // Подписываем в эту группу всех, кто есть в канале
@@ -1280,6 +1287,7 @@ async function getGroup(groupId) {
   if (!g) return null;
   const members = await getGroupMembers(groupId);
   const admins = await getGroupAdmins(groupId);
+     return { id: g.id, name: g.name, description: g.description || '', rules: g.rules || '', avatarUrl: g.avatar_url || null, type: g.type || 'group', owner: g.owner, color: g.color, createdAt: g.created_at, members, admins, commentsEnabled: g.comments_enabled === 1 || g.comments_enabled === undefined };
   return { id: g.id, name: g.name, description: g.description || '', rules: g.rules || '', avatarUrl: g.avatar_url || null, type: g.type || 'group', owner: g.owner, color: g.color, createdAt: g.created_at, members, admins };
 }
 
