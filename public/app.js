@@ -123,7 +123,9 @@ const RTC_CONFIG = {
 const DEFAULT_SETTINGS = {
   theme: 'dark', accent: 'violet', sound: true, notifications: true,
   wallpaper: null, minimalMode: false, liveBg: false, vibration: true,
-  liveReactions: true, nyMode: false
+  liveReactions: true, nyMode: false,
+  nyAvaRing: true, // Новая настройка: обводка
+  nyBanner: 'default' // Новая настройка: баннер
 };
 let settings = Object.assign({}, DEFAULT_SETTINGS, JSON.parse(localStorage.getItem('danumes.settings') || '{}'));
 
@@ -146,6 +148,14 @@ const GIFS = [
   { url: 'https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif', label: 'wow' },
   { url: 'https://media.giphy.com/media/5GoVLqeAOo6PK/giphy.gif', label: 'clap' }
 ];
+
+/* Обертка для аватарки с новогодней обводкой */
+function wrapAva(avaHtml, sizeClass = '') {
+  if (settings.nyMode && settings.nyAvaRing) {
+    return `<div class="ny-ava-ring ${sizeClass}">${avaHtml}</div>`;
+  }
+  return avaHtml;
+}
 
 /* ============================================================
    УТИЛИТЫ
@@ -211,6 +221,11 @@ function toast(text, dur = 2500) {
    НАСТРОЙКИ
    ============================================================ */
 function applySettings() {
+     // НОВОГОДНИЕ ЭФФЕКТЫ (темы)
+  document.body.classList.remove('ny-theme-1', 'ny-theme-2', 'ny-theme-3');
+  if (settings.nyMode && settings.nyTheme) {
+    document.body.classList.add('ny-theme-' + settings.nyTheme);
+  }
   document.documentElement.setAttribute('data-theme', settings.theme);
   const acc = ACCENTS[settings.accent] || ACCENTS.violet;
   document.documentElement.style.setProperty('--grad', `linear-gradient(135deg, ${acc.a} 0%, ${acc.b} 100%)`);
@@ -4253,6 +4268,9 @@ function renderUserProfile(user) {
   } else {
     avaHtml = `<div class="up-ava" style="background:${color}">${(username[0] || '?').toUpperCase()}</div>`;
   }
+  
+  // Применяем новогоднюю обводку, если включено
+  avaHtml = wrapAva(avaHtml);
 
   // Статус
   let statusHtml = '';
