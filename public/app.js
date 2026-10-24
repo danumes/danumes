@@ -122,7 +122,7 @@ const RTC_CONFIG = {
 const DEFAULT_SETTINGS = {
   theme: 'dark', accent: 'violet', sound: true, notifications: true,
   wallpaper: null, minimalMode: false, liveBg: false, vibration: true,
-  liveReactions: true
+  liveReactions: true, nyMode: false
 };
 let settings = Object.assign({}, DEFAULT_SETTINGS, JSON.parse(localStorage.getItem('danumes.settings') || '{}'));
 
@@ -235,6 +235,18 @@ function applySettings() {
   setOn('minimalModeSwitch', settings.minimalMode);
   setTxt('minimalModeSub', settings.minimalMode ? 'Вкл' : 'Выкл');
   setOn('liveBgSwitch', settings.liveBg);
+     // Новогодний режим
+  setOn('nyModeSwitch', settings.nyMode);
+  setTxt('nyModeSub', settings.nyMode ? 'Включён' : 'Выключен');
+  
+  const nyBanner = $('nyBanner');
+  if (nyBanner) nyBanner.style.display = settings.nyMode ? 'flex' : 'none';
+  
+  if (settings.nyMode) {
+    document.body.classList.add('ny-mode');
+  } else {
+    document.body.classList.remove('ny-mode');
+  }
   setTxt('liveBgSub', settings.liveBg ? 'Вкл' : 'Выкл');
 
   localStorage.setItem('danumes.settings', JSON.stringify(settings));
@@ -3576,6 +3588,16 @@ function initSettings() {
   });
   $('minimalModeItem') && ($('minimalModeItem').onclick = () => { settings.minimalMode = !settings.minimalMode; applySettings(); saveSettingsToServer(); });
   $('liveBgItem') && ($('liveBgItem').onclick = () => { settings.liveBg = !settings.liveBg; applySettings(); saveSettingsToServer(); });
+     $('nyModeItem') && ($('nyModeItem').onclick = () => {
+    settings.nyMode = !settings.nyMode;
+    applySettings();
+    saveSettingsToServer();
+    
+    // При включении создаём снежинки в баннере
+    if (settings.nyMode) {
+      createSnowflakes();
+    }
+  });
   $('soundItem') && ($('soundItem').onclick = () => { settings.sound = !settings.sound; applySettings(); saveSettingsToServer(); });
   $('notifyItem') && ($('notifyItem').onclick = () => { settings.notifications = !settings.notifications; if (settings.notifications && Notification.permission === 'default') Notification.requestPermission(); applySettings(); saveSettingsToServer(); });
   $('vibrationItem') && ($('vibrationItem').onclick = () => { settings.vibration = !settings.vibration; applySettings(); saveSettingsToServer(); });
@@ -4528,6 +4550,34 @@ $('railCallBtn') && ($('railCallBtn').onclick = () => {
   };
 })();
 
+/* ============================================================
+   НОВОГОДНИЕ СНЕЖИНКИ
+   ============================================================ */
+function createSnowflakes() {
+  const banner = $('nyBanner');
+  if (!banner) return;
+  
+  // Очищаем старые
+  banner.querySelectorAll('.ny-snowflake').forEach(el => el.remove());
+  
+  const count = 15;
+  for (let i = 0; i < count; i++) {
+    const snow = document.createElement('div');
+    snow.className = 'ny-snowflake';
+    snow.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;opacity:0.6;">
+      <path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07"/>
+    </svg>`;
+    
+    const size = 6 + Math.random() * 14;
+    snow.style.width = size + 'px';
+    snow.style.height = size + 'px';
+    snow.style.left = Math.random() * 100 + '%';
+    snow.style.animationDuration = (2 + Math.random() * 4) + 's';
+    snow.style.animationDelay = (Math.random() * 2) + 's';
+    
+    banner.appendChild(snow);
+  }
+}
 
 /* ============================================================
    КОНЕЦ ФАЙЛА app.js
