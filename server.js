@@ -109,10 +109,11 @@ async function initTables() {
     try { await db.execute(stmt); }
     catch (e) { if (!e.message.includes('already exists')) console.error('SQL init error:', e.message); }
   }
+  
+  try { await db.execute("ALTER TABLE groups_t ADD COLUMN comments_enabled INTEGER DEFAULT 1"); } catch (e) {}
+  
   console.log('✅ Таблицы инициализированы');
 }
-
-  try { await db.execute("ALTER TABLE groups_t ADD COLUMN comments_enabled INTEGER DEFAULT 1"); } catch (e) {}
 
 /* ---------- EXPRESS ---------- */
 const app = express();
@@ -1287,8 +1288,7 @@ async function getGroup(groupId) {
   if (!g) return null;
   const members = await getGroupMembers(groupId);
   const admins = await getGroupAdmins(groupId);
-     return { id: g.id, name: g.name, description: g.description || '', rules: g.rules || '', avatarUrl: g.avatar_url || null, type: g.type || 'group', owner: g.owner, color: g.color, createdAt: g.created_at, members, admins, commentsEnabled: g.comments_enabled === 1 || g.comments_enabled === undefined };
-  return { id: g.id, name: g.name, description: g.description || '', rules: g.rules || '', avatarUrl: g.avatar_url || null, type: g.type || 'group', owner: g.owner, color: g.color, createdAt: g.created_at, members, admins };
+  return { id: g.id, name: g.name, description: g.description || '', rules: g.rules || '', avatarUrl: g.avatar_url || null, type: g.type || 'group', owner: g.owner, color: g.color, createdAt: g.created_at, members, admins, commentsEnabled: g.comments_enabled === 1 || g.comments_enabled === undefined };
 }
 
 /* ---------- REST API ---------- */
