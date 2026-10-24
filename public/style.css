@@ -3790,15 +3790,31 @@ body.ny-mode .ny-screen-snow {
   100% { transform: translateX(-50%) rotate(360deg) scale(1); opacity: 0.8; }
 }
 
-/* 2. Новогодние баннеры для профиля */
 .ny-profile-banner {
-  height: 120px;
+  height: 140px;
   width: 100%;
   border-radius: 16px 16px 0 0;
-  background-size: cover;
-  background-position: center;
+  background: 
+    radial-gradient(circle at 15% 30%, rgba(255,255,255,0.15) 0%, transparent 30%),
+    radial-gradient(circle at 80% 20%, rgba(255,255,255,0.1) 0%, transparent 40%),
+    linear-gradient(135deg, #2b0b40 0%, #0d1b4b 50%, #061e2e 100%);
   position: relative;
   overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+/* Снежинки на баннере */
+.ny-profile-banner::before {
+  content: '❄ ❅ ❆ ❄ ❅ ❆ ❄ ❅ ❆ ❄ ❅ ❆';
+  position: absolute;
+  top: -10px;
+  left: 0;
+  width: 100%;
+  color: rgba(255,255,255,0.3);
+  font-size: 18px;
+  letter-spacing: 25px;
+  text-align: center;
+  animation: ny-banner-snow 20s linear infinite;
 }
 
 .ny-profile-banner::after {
@@ -3808,11 +3824,10 @@ body.ny-mode .ny-screen-snow {
   background: linear-gradient(to bottom, transparent 0%, rgba(10, 7, 22, 0.9) 100%);
 }
 
-/* 3. Темы мессенджера (красивые градиенты) */
-body.ny-theme-1 { background: linear-gradient(135deg, #0a0716 0%, #1a0b2e 100%); }
-body.ny-theme-2 { background: linear-gradient(135deg, #001220 0%, #0a2a1a 100%); }
-body.ny-theme-3 { background: linear-gradient(135deg, #1a0505 0%, #2e0b1a 100%); }
-
+@keyframes ny-banner-snow {
+  0% { transform: translateY(-10px) translateX(0); opacity: 0.3; }
+  100% { transform: translateY(160px) translateX(-50px); opacity: 0; }
+}
 /* ============================================================
    КОНЕЦ
    ============================================================ */
