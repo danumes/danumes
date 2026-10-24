@@ -35,7 +35,6 @@ let ctxMessage = null;
 let pendingAttachments = [];
 let scheduledFor = null;
 let editMode = null;
-let nySnowTimer = null;
 
 let ngSelectedType = 'group';
 let ngSelectedMembers = new Set();
