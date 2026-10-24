@@ -401,6 +401,20 @@
     </button>
     <h2>Настройки</h2>
   </div>
+
+      <!-- Новогодний баннер -->
+    <div class="ny-banner" id="nyBanner" style="display:none;">
+      <div class="ny-snowflake" style="left: 10%; animation-duration: 3s; width: 10px; height: 10px;"></div>
+      <div class="ny-snowflake" style="left: 30%; animation-duration: 4s; width: 14px; height: 14px;"></div>
+      <div class="ny-snowflake" style="left: 50%; animation-duration: 2.5s; width: 8px; height: 8px;"></div>
+      <div class="ny-snowflake" style="left: 70%; animation-duration: 5s; width: 12px; height: 12px;"></div>
+      <div class="ny-snowflake" style="left: 90%; animation-duration: 3.5s; width: 16px; height: 16px;"></div>
+      <div class="ny-banner-content">
+        <div class="ny-banner-title">С Новым Годом!</div>
+        <div class="ny-banner-sub">Пусть этот год будет волшебным</div>
+      </div>
+    </div>
+  
   <div class="panel-body">
     <div class="profile-hero">
       <div class="ava xxl" id="profAva" style="background:var(--grad)">?</div>
@@ -449,6 +463,23 @@
       </div>
     </div>
 
+    <div class="settings-section">
+      <div class="settings-section-title">События</div>
+      <!-- Переключатель НГ -->
+      <div class="ny-toggle-row" id="nyModeItem">
+        <div class="ny-toggle-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07"/>
+          </svg>
+        </div>
+        <div class="ny-toggle-body">
+          <div class="ny-toggle-title">Новогодний режим</div>
+          <div class="ny-toggle-sub" id="nyModeSub">Выключен</div>
+        </div>
+        <div class="switch" id="nyModeSwitch"></div>
+      </div>
+    </div>
+    
     <div class="settings-section">
       <div class="settings-section-title">Уведомления</div>
       <div class="settings-card">
