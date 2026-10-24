@@ -3724,5 +3724,95 @@ body.ny-mode .ny-screen-snow {
 }
 
 /* ============================================================
+   НОВОГОДНИЙ ИВЕНТ — СТИЛИ (v1)
+   ============================================================ */
+
+/* 1. Обводка аватарок снежинками */
+.ny-ava-ring {
+  position: relative;
+  padding: 3px; /* Толщина обводки */
+  border-radius: 50%;
+  background: linear-gradient(135deg, #a78bfa, #7c3aed, #06b6d4);
+  background-size: 200% 200%;
+  animation: ny-ring-glow 3s ease-in-out infinite;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 12px rgba(167, 139, 250, 0.4);
+  z-index: 1;
+}
+
+/* Вращающиеся снежинки вокруг аватара */
+.ny-ava-ring::before,
+.ny-ava-ring::after {
+  content: '❄';
+  position: absolute;
+  font-size: 14px;
+  color: #fff;
+  text-shadow: 0 0 8px #a78bfa;
+  pointer-events: none;
+}
+
+/* Снежинка 1 (сверху) */
+.ny-ava-ring::before {
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: ny-snow-spin 4s linear infinite;
+}
+
+/* Снежинка 2 (снизу) */
+.ny-ava-ring::after {
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: ny-snow-spin 4s linear infinite reverse;
+}
+
+/* Внутренний аватар, чтобы он не вылезал за края */
+.ny-ava-ring > * {
+  border-radius: 50%;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background-size: cover;
+  background-position: center;
+}
+
+@keyframes ny-ring-glow {
+  0%, 100% { background-position: 0% 50%; box-shadow: 0 0 10px rgba(167, 139, 250, 0.4); }
+  50% { background-position: 100% 50%; box-shadow: 0 0 20px rgba(6, 182, 212, 0.7); }
+}
+
+@keyframes ny-snow-spin {
+  0% { transform: translateX(-50%) rotate(0deg) scale(1); opacity: 0.8; }
+  50% { transform: translateX(-50%) rotate(180deg) scale(1.2); opacity: 1; }
+  100% { transform: translateX(-50%) rotate(360deg) scale(1); opacity: 0.8; }
+}
+
+/* 2. Новогодние баннеры для профиля */
+.ny-profile-banner {
+  height: 120px;
+  width: 100%;
+  border-radius: 16px 16px 0 0;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.ny-profile-banner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 0%, rgba(10, 7, 22, 0.9) 100%);
+}
+
+/* 3. Темы мессенджера (красивые градиенты) */
+body.ny-theme-1 { background: linear-gradient(135deg, #0a0716 0%, #1a0b2e 100%); }
+body.ny-theme-2 { background: linear-gradient(135deg, #001220 0%, #0a2a1a 100%); }
+body.ny-theme-3 { background: linear-gradient(135deg, #1a0505 0%, #2e0b1a 100%); }
+
+/* ============================================================
    КОНЕЦ
    ============================================================ */
