@@ -244,8 +244,11 @@ function applySettings() {
   
   if (settings.nyMode) {
     document.body.classList.add('ny-mode');
+    startScreenSnow();
+    playNewYearSound();
   } else {
     document.body.classList.remove('ny-mode');
+    stopScreenSnow();
   }
   setTxt('liveBgSub', settings.liveBg ? 'Вкл' : 'Выкл');
 
@@ -4577,6 +4580,97 @@ function createSnowflakes() {
     
     banner.appendChild(snow);
   }
+}
+
+/* ============================================================
+   НОВОГОДНИЕ ЭФФЕКТЫ (СНЕГ НА ЭКРАНЕ И ЗВУК)
+   ============================================================ */
+let nySnowTimer = null;
+
+function startScreenSnow() {
+  const container = $('nyScreenSnow');
+  if (!container) return;
+  
+  // Очищаем старые
+  container.innerHTML = '';
+  
+  // Создаём 30 снежинок
+  for (let i = 0; i < 30; i++) {
+    createScreenSnowflake(container);
+  }
+  
+  // Добавляем новые каждые 2 секунды
+  if (nySnowTimer) clearInterval(nySnowTimer);
+  nySnowTimer = setInterval(() => {
+    if (document.body.classList.contains('ny-mode')) {
+      createScreenSnowflake(container);
+    } else {
+      stopScreenSnow();
+    }
+  }, 2000);
+}
+
+function createScreenSnowflake(container) {
+  const el = document.createElement('div');
+  el.className = 'ny-screen-snowflake';
+  el.innerHTML = '❄';
+  el.style.left = Math.random() * 100 + '%';
+  el.style.fontSize = (10 + Math.random() * 20) + 'px';
+  el.style.animationDuration = (5 + Math.random() * 10) + 's';
+  el.style.animationDelay = (Math.random() * 5) + 's';
+  container.appendChild(el);
+  
+  // Удаляем снежинку после того, как она упала
+  setTimeout(() => {
+    if (el.parentNode) el.parentNode.removeChild(el);
+  }, 15000);
+}
+
+function stopScreenSnow() {
+  if (nySnowTimer) {
+    clearInterval(nySnowTimer);
+    nySnowTimer = null;
+  }
+  const container = $('nyScreenSnow');
+  if (container) container.innerHTML = '';
+}
+
+// Звук уведомления (колокольчики)
+let nyAudioCtx = null;
+function playNewYearSound() {
+  try {
+    if (!nyAudioCtx) nyAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = nyAudioCtx;
+    const now = ctx.currentTime;
+    
+    // Мелодия "Jingle Bells" (короткая)
+    const notes = [
+      { f: 659.25, d: 0.15 }, // E5
+      { f: 659.25, d: 0.15 }, // E5
+      { f: 659.25, d: 0.3 },  // E5
+      { f: 523.25, d: 0.15 }, // C5
+      { f: 659.25, d: 0.15 }, // E5
+      { f: 783.99, d: 0.3 }   // G5
+    ];
+    
+    let t = now;
+    notes.forEach(note => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = note.f;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.1, t + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + note.d);
+      
+      osc.start(t);
+      osc.stop(t + note.d);
+      t += note.d;
+    });
+  } catch (e) {}
 }
 
 /* ============================================================
