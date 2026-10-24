@@ -4239,6 +4239,7 @@ function openUserProfile(username) {
         usersMap.set(key, found);
         renderUserProfile(found);
       } else {
+         
         body.innerHTML = '<div class="up-error">⚠️ Пользователь не найден</div>';
       }
     });
@@ -4332,7 +4333,14 @@ function renderUserProfile(user) {
       <div class="up-info-row">👥 <span>${commonGroups} ${plural(commonGroups, 'общая группа', 'общие группы', 'общих групп')}</span></div>
     </div>`;
 
+  // Новогодний баннер
+  let bannerHtml = '';
+  if (settings.nyMode && settings.nyBanner) {
+    bannerHtml = `<div class="ny-profile-banner"></div>`;
+  }
+   
   body.innerHTML = `
+    ${bannerHtml}
     <div class="up-hero">
       ${avaHtml}
       <div class="up-name">${esc(username)}${verify}</div>
