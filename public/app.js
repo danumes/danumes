@@ -5,6 +5,7 @@
 const socket = io({
     auth: { token: localStorage.getItem('danumes.token') || '' }
 });
+let nySnowTimer = null;
 
 /* ============================================================
    СОСТОЯНИЕ
