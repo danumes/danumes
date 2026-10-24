@@ -4585,8 +4585,6 @@ function createSnowflakes() {
 /* ============================================================
    НОВОГОДНИЕ ЭФФЕКТЫ (СНЕГ НА ЭКРАНЕ И ЗВУК)
    ============================================================ */
-let nySnowTimer = null;
-
 function startScreenSnow() {
   const container = $('nyScreenSnow');
   if (!container) return;
