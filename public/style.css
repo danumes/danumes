@@ -3810,6 +3810,74 @@ body.ny-mode .ny-screen-snow {
   box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
+/* Базовый баннер */
+.ny-profile-banner {
+  height: 120px;
+  width: 100%;
+  border-radius: 16px 16px 0 0;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 -20px 40px rgba(0,0,0,0.8); /* Затемнение снизу */
+}
+
+/* Вариант 1: Стандартный (градиент) */
+.ny-banner-default {
+  background: linear-gradient(135deg, #2b0b40 0%, #0d1b4b 50%, #061e2e 100%);
+}
+
+/* Вариант 2: Снежная ночь */
+.ny-banner-snow {
+  background: linear-gradient(to bottom, #0a1128 0%, #1c2541 100%);
+}
+.ny-banner-snow::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 3px);
+  background-size: 50px 50px;
+  animation: ny-banner-snow-bg 10s linear infinite;
+}
+@keyframes ny-banner-snow-bg {
+  0% { background-position: 0 0; }
+  100% { background-position: 50px 50px; }
+}
+
+/* Вариант 3: Гирлянды (светящиеся точки) */
+.ny-banner-lights {
+  background: #111;
+}
+.ny-banner-lights::after {
+  content: '';
+  position: absolute;
+  top: 10%;
+  left: 0;
+  width: 100%;
+  height: 6px;
+  background-image: radial-gradient(circle, #ff0, #f0f 50%, transparent 70%);
+  background-size: 20px 20px;
+  filter: blur(2px);
+  animation: ny-banner-lights-anim 2s linear infinite alternate;
+}
+@keyframes ny-banner-lights-anim {
+  0% { opacity: 0.5; transform: scaleX(1); }
+  100% { opacity: 1; transform: scaleX(1.1); }
+}
+
+/* Вариант 4: Космос (фиолетовый с звёздами) */
+.ny-banner-space {
+  background: radial-gradient(circle at 50% 50%, #3b0764 0%, #170a1c 100%);
+}
+.ny-banner-space::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(#fff, rgba(255,255,255,.1) 1px, transparent 2px);
+  background-size: 30px 30px;
+  opacity: 0.6;
+}
+
 /* Снежинки на баннере */
 .ny-profile-banner::before {
   content: '❄ ❅ ❆ ❄ ❅ ❆ ❄ ❅ ❆ ❄ ❅ ❆';
