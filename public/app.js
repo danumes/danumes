@@ -154,7 +154,18 @@ const GIFS = [
 /* Обертка для аватарки с новогодней обводкой */
 function wrapAva(avaHtml, sizeClass = '') {
   if (settings.nyMode && settings.nyAvaRing) {
-    return `<div class="ny-ava-ring ${sizeClass}">${avaHtml}</div>`;
+    // Добавляем 8 снежинок вокруг аватарки
+    return `<div class="ny-ava-ring ${sizeClass}">
+      <span class="ny-snowflake">❄</span>
+      <span class="ny-snowflake">❄</span>
+      <span class="ny-snowflake">❄</span>
+      <span class="ny-snowflake">❄</span>
+      <span class="ny-snowflake">❄</span>
+      <span class="ny-snowflake">❄</span>
+      <span class="ny-snowflake">❄</span>
+      <span class="ny-snowflake">❄</span>
+      ${avaHtml}
+    </div>`;
   }
   return avaHtml;
 }
