@@ -3475,266 +3475,84 @@ div[style*="tatnet.ru"] {
 
 
 /* ============================================================
-   НОВОГОДНИЙ ИВЕНТ
+   НОВОГОДНИЙ ИВЕНТ — ИДЕАЛЬНЫЙ ДИЗАЙН (v3)
    ============================================================ */
-.ny-banner {
-  position: relative;
+
+/* 1. Красивый баннер с ёлкой и снегом */
+.ny-profile-banner {
+  height: 180px;
   width: 100%;
-  height: 140px;
-  border-radius: 16px;
+  position: relative;
+  background: linear-gradient(to bottom, #001133 0%, #003366 100%);
   overflow: hidden;
-  background: var(--ny-banner);
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 10px 30px -10px var(--ny-glow);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px 16px 0 0;
 }
 
-.ny-banner::before {
+/* Ёлка на фоне (рисуем через CSS) */
+.ny-profile-banner::before {
   content: '';
   position: absolute;
-  inset: 0;
-  background-image: 
-    radial-gradient(circle at 20% 30%, rgba(255,255,255,0.2) 0%, transparent 20%),
-    radial-gradient(circle at 80% 70%, rgba(255,255,255,0.15) 0%, transparent 25%),
-    radial-gradient(circle at 50% 50%, rgba(167, 139, 250, 0.3) 0%, transparent 50%);
+  right: 10%;
+  bottom: 0;
+  width: 140px;
+  height: 160px;
+  background: 
+    radial-gradient(circle at 50% 10%, #a7f3d0 2px, transparent 3px),
+    radial-gradient(circle at 30% 30%, #a7f3d0 2px, transparent 3px),
+    radial-gradient(circle at 70% 30%, #a7f3d0 2px, transparent 3px),
+    radial-gradient(circle at 50% 50%, #a7f3d0 3px, transparent 4px),
+    radial-gradient(circle at 20% 60%, #a7f3d0 2px, transparent 3px),
+    radial-gradient(circle at 80% 60%, #a7f3d0 2px, transparent 3px);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  /* Сама форма ёлки */
+  clip-path: polygon(50% 0%, 80% 30%, 60% 30%, 90% 60%, 70% 60%, 100% 100%, 0% 100%, 30% 60%, 10% 60%, 40% 30%, 20% 30%);
+  background-color: #0f4a3a;
+  box-shadow: 0 0 20px rgba(167, 243, 208, 0.2);
   z-index: 1;
 }
 
-.ny-banner-content {
-  position: relative;
-  z-index: 2;
-  text-align: center;
-  color: #fff;
-}
-
-.ny-banner-title {
+/* Звезда на ёлке */
+.ny-profile-banner::after {
+  content: '⭐';
+  position: absolute;
+  right: calc(10% + 55px);
+  top: 5px;
   font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
-  margin-bottom: 4px;
+  text-shadow: 0 0 10px #fbbf24;
+  z-index: 2;
+  animation: ny-star-glow 2s infinite alternate;
 }
 
-.ny-banner-sub {
-  font-size: 13px;
-  opacity: 0.8;
-  font-weight: 500;
-}
-
-/* Снежинки (SVG) */
-.ny-snowflake {
-  position: absolute;
-  pointer-events: none;
-  z-index: 1;
-  animation: ny-fall linear infinite;
-  opacity: 0.6;
-}
-
-@keyframes ny-fall {
-  0% { transform: translateY(-100px) rotate(0deg); opacity: 0; }
-  10% { opacity: 0.6; }
-  90% { opacity: 0.6; }
-  100% { transform: translateY(200px) rotate(360deg); opacity: 0; }
-}
-
-/* Новогодняя аватарка */
-.ny-avatar-wrap {
-  position: relative;
-  display: inline-block;
-}
-.ny-avatar-wrap::after {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  background: conic-gradient(from 0deg, transparent, rgba(167,139,250,0.5), transparent, rgba(167,139,250,0.5), transparent);
-  animation: ny-spin 4s linear infinite;
-  z-index: -1;
-  filter: blur(4px);
-}
-
-@keyframes ny-spin {
-  100% { transform: rotate(360deg); }
-}
-
-/* Снежинки в шапке канала */
-.ny-head-snow {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  pointer-events: none;
-  overflow: hidden;
-  z-index: 0;
-}
-
-/* Переключатель в настройках */
-.ny-toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px;
-  background: var(--bg-3);
-  border-radius: 16px;
-  margin: 0 16px 12px;
-  border: 1px solid var(--border);
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.ny-toggle-row:hover {
-  background: var(--bg-4);
-}
-.ny-toggle-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: var(--ny-banner);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 12px;
-}
-.ny-toggle-body {
-  flex: 1;
-}
-.ny-toggle-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-}
-.ny-toggle-sub {
-  font-size: 12px;
-  color: var(--text-2);
-  margin-top: 2px;
-}
-
-/* ============================================================
-   НОВОГОДНИЕ УКРАШЕНИЯ
-   ============================================================ */
-
-/* 1. Гирлянда на шапке чата */
-.ny-garland {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 4px;
-  display: flex;
-  justify-content: space-around;
-  pointer-events: none;
-  z-index: 10;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-body.ny-mode .ny-garland { opacity: 1; }
-.ny-garland::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  background: #222;
-}
-.ny-garland-light {
-  width: 10px;
-  height: 14px;
-  border-radius: 50%;
-  position: relative;
-  top: 2px;
-  margin: 0 4px;
-  animation: ny-blink 2s infinite alternate;
-}
-.ny-garland-light:nth-child(1) { background: #ff4d4d; box-shadow: 0 0 10px #ff4d4d; animation-delay: 0s; }
-.ny-garland-light:nth-child(2) { background: #4dff4d; box-shadow: 0 0 10px #4dff4d; animation-delay: 0.3s; }
-.ny-garland-light:nth-child(3) { background: #4d4dff; box-shadow: 0 0 10px #4d4dff; animation-delay: 0.6s; }
-.ny-garland-light:nth-child(4) { background: #ffff4d; box-shadow: 0 0 10px #ffff4d; animation-delay: 0.9s; }
-.ny-garland-light:nth-child(5) { background: #ff4dff; box-shadow: 0 0 10px #ff4dff; animation-delay: 1.2s; }
-.ny-garland-light:nth-child(6) { background: #4dffff; box-shadow: 0 0 10px #4dffff; animation-delay: 1.5s; }
-.ny-garland-light:nth-child(7) { background: #ffffff; box-shadow: 0 0 10px #ffffff; animation-delay: 1.8s; }
-
-@keyframes ny-blink {
-  0% { opacity: 0.4; transform: scale(0.9); }
+@keyframes ny-star-glow {
+  0% { opacity: 0.7; transform: scale(1); }
   100% { opacity: 1; transform: scale(1.1); }
 }
 
-/* 2. Свечение аватарок */
-body.ny-mode .ava {
-  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.5), 0 0 15px rgba(167, 139, 250, 0.3);
-  position: relative;
-}
-body.ny-mode .ava::after {
+/* Снег на баннере */
+.ny-banner-snow::after {
   content: '';
   position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  background: conic-gradient(from 0deg, transparent, rgba(167,139,250,0.6), transparent, rgba(167,139,250,0.6), transparent);
-  animation: ny-spin 4s linear infinite;
-  z-index: -1;
-  filter: blur(3px);
-  pointer-events: none;
-}
-@keyframes ny-spin {
-  100% { transform: rotate(360deg); }
-}
-
-/* 3. Новогодний фон для чата (снежинки в фоне) */
-body.ny-mode .msgs {
-  background-image: 
-    radial-gradient(circle at 10% 20%, rgba(167, 139, 250, 0.05) 0%, transparent 20%),
-    radial-gradient(circle at 90% 80%, rgba(167, 139, 250, 0.05) 0%, transparent 20%);
-}
-body.ny-mode .msgs::before {
-  content: '❄ ❅ ❆ ❄ ❅ ❆ ❄ ❅ ❆';
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  font-size: 40px;
-  color: rgba(255, 255, 255, 0.03);
-  text-align: justify;
-  line-height: 150px;
-  padding: 20px;
-  pointer-events: none;
+  inset: 0;
+  background-image: radial-gradient(white 1px, transparent 2px);
+  background-size: 40px 40px;
+  animation: ny-snow-fall 15s linear infinite;
+  opacity: 0.5;
   z-index: 0;
-  letter-spacing: 20px;
-  overflow: hidden;
 }
 
-/* 4. Снежинки по всему экрану */
-.ny-screen-snow {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  pointer-events: none;
-  z-index: 9998;
-  overflow: hidden;
-  display: none;
-}
-body.ny-mode .ny-screen-snow {
-  display: block;
-}
-.ny-screen-snowflake {
-  position: absolute;
-  top: -20px;
-  color: #fff;
-  opacity: 0.6;
-  animation: ny-fall-screen linear infinite;
-  text-shadow: 0 0 5px rgba(255,255,255,0.5);
-}
-@keyframes ny-fall-screen {
-  0% { transform: translateY(-20px) rotate(0deg); opacity: 0; }
-  10% { opacity: 0.6; }
-  90% { opacity: 0.6; }
-  100% { transform: translateY(105vh) rotate(360deg); opacity: 0; }
+@keyframes ny-snow-fall {
+  0% { transform: translateY(-40px); }
+  100% { transform: translateY(180px); }
 }
 
-/* ============================================================
-   НОВОГОДНИЙ ИВЕНТ — ИДЕАЛЬНЫЕ СТИЛИ
-   ============================================================ */
-
-/* 1. Обводка аватарок (как на картинке) */
+/* 2. Обводка (как на фото — по кругу) */
 .ny-ava-ring {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 6px; /* Отступ для рамки */
-  background: transparent;
+  padding: 4px;
   z-index: 10;
 }
 
@@ -3742,8 +3560,8 @@ body.ny-mode .ny-screen-snow {
 .ny-ava-ring > .up-ava,
 .ny-ava-ring > .ava {
   border-radius: 50%;
-  width: 100%;
-  height: 100%;
+  width: 90px;
+  height: 90px;
   object-fit: cover;
   background-size: cover;
   background-position: center;
@@ -3753,99 +3571,37 @@ body.ny-mode .ny-screen-snow {
   font-size: 36px;
   font-weight: 700;
   color: #fff;
-  border: 2px solid rgba(167, 139, 250, 0.6); /* Фиолетовая ледяная рамка */
-  box-shadow: 0 0 15px rgba(167, 139, 250, 0.4), inset 0 0 15px rgba(167, 139, 250, 0.2);
-  background-color: var(--bg-2);
+  /* Легкая ледяная окантовка */
+  border: 2px solid rgba(255, 255, 255, 0.3); 
+  box-shadow: 0 0 15px rgba(167, 139, 250, 0.4);
   position: relative;
   z-index: 2;
 }
 
-/* Снежинки вокруг */
+/* Снежинки по кругу */
 .ny-snowflake {
   position: absolute;
   color: #fff;
-  font-size: 16px;
-  text-shadow: 0 0 6px #a78bfa, 0 0 12px #fff;
+  font-size: 18px;
+  text-shadow: 0 0 10px #a78bfa, 0 0 20px #fff;
   pointer-events: none;
   z-index: 3;
-  /* По умолчанию в центре */
-  top: 50%;
-  left: 50%;
-  margin-top: -8px; /* Половина высоты */
-  margin-left: -8px; /* Половина ширины */
   animation: ny-breathe 2s ease-in-out infinite alternate;
 }
 
-/* Позиции снежинок (круг радиусом 48px) */
-.ny-snowflake:nth-child(1) { transform: rotate(0deg) translate(48px) rotate(0deg); animation-delay: 0s; }
-.ny-snowflake:nth-child(2) { transform: rotate(45deg) translate(48px) rotate(-45deg); animation-delay: 0.25s; }
-.ny-snowflake:nth-child(3) { transform: rotate(90deg) translate(48px) rotate(-90deg); animation-delay: 0.5s; }
-.ny-snowflake:nth-child(4) { transform: rotate(135deg) translate(48px) rotate(-135deg); animation-delay: 0.75s; }
-.ny-snowflake:nth-child(5) { transform: rotate(180deg) translate(48px) rotate(-180deg); animation-delay: 1s; }
-.ny-snowflake:nth-child(6) { transform: rotate(225deg) translate(48px) rotate(-225deg); animation-delay: 1.25s; }
-.ny-snowflake:nth-child(7) { transform: rotate(270deg) translate(48px) rotate(-270deg); animation-delay: 1.5s; }
-.ny-snowflake:nth-child(8) { transform: rotate(315deg) translate(48px) rotate(-315deg); animation-delay: 1.75s; }
+/* Позиционируем 8 снежинок вокруг аватарки 90x90 (радиус ~55px) */
+.ny-snowflake:nth-child(1) { top: -6px; left: 50%; transform: translateX(-50%); animation-delay: 0s; }
+.ny-snowflake:nth-child(2) { top: 12px; right: -6px; transform: translateX(50%); animation-delay: 0.25s; }
+.ny-snowflake:nth-child(3) { top: 50%; right: -12px; transform: translateY(-50%); animation-delay: 0.5s; }
+.ny-snowflake:nth-child(4) { bottom: 12px; right: -6px; transform: translateX(50%); animation-delay: 0.75s; }
+.ny-snowflake:nth-child(5) { bottom: -6px; left: 50%; transform: translateX(-50%); animation-delay: 1s; }
+.ny-snowflake:nth-child(6) { bottom: 12px; left: -6px; transform: translateX(-50%); animation-delay: 1.25s; }
+.ny-snowflake:nth-child(7) { top: 50%; left: -12px; transform: translateY(-50%); animation-delay: 1.5s; }
+.ny-snowflake:nth-child(8) { top: 12px; left: -6px; transform: translateX(-50%); animation-delay: 1.75s; }
 
 @keyframes ny-breathe {
-  0% { opacity: 0.4; filter: blur(1px); }
-  100% { opacity: 1; filter: blur(0); }
-}
-
-/* 2. Новогодний баннер за профилем */
-.ny-profile-banner {
-  height: 160px;
-  width: 100%;
-  border-radius: 16px 16px 0 0;
-  background-size: cover;
-  background-position: center;
-  position: relative;
-  overflow: hidden;
-}
-
-/* Красивый синий баннер с летящими снежинками */
-.ny-banner-snow {
-  background: linear-gradient(180deg, #020b1a 0%, #0d2142 50%, #1a2d5c 100%);
-}
-
-/* Рисуем снежинки на баннере через градиент */
-.ny-banner-snow::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: 
-    radial-gradient(white 1px, transparent 2px),
-    radial-gradient(white 1px, transparent 2px);
-  background-size: 60px 60px, 80px 80px;
-  background-position: 0 0, 30px 30px;
-  animation: ny-banner-snow 20s linear infinite;
-  opacity: 0.4;
-}
-
-@keyframes ny-banner-snow {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(160px); }
-}
-
-/* Стандартный (если выбран в настройках) */
-.ny-banner-default {
-  background: radial-gradient(circle at 50% 50%, #2b0b40 0%, #0d1b4b 70%, #061e2e 100%);
-}
-
-/* 3. Гирлянда в шапке */
-body.ny-mode .main-head::after {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #ff4d4d, #4dff4d, #4d4dff, #ffff4d, #ff4dff, #4dffff, #ff4d4d);
-  background-size: 200% 100%;
-  animation: ny-garland 3s linear infinite;
-  box-shadow: 0 0 10px rgba(255,255,255,0.5);
-  z-index: 10;
-}
-@keyframes ny-garland {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 200% 50%; }
+  0% { opacity: 0.5; transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1.1); }
 }
 /* ============================================================
    КОНЕЦ
