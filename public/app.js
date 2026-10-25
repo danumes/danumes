@@ -4384,12 +4384,13 @@ function renderUserProfile(user) {
   // Новогодний баннер
   let bannerHtml = '';
   if (settings.nyMode) {
+    // Всегда используем класс ny-banner-snow для снега, а фон задаем в CSS
     bannerHtml = `<div class="ny-profile-banner ny-banner-snow"></div>`;
   }
 
   body.innerHTML = `
     ${bannerHtml}
-    <div class="up-hero" style="position: relative; z-index: 2; ${settings.nyMode ? 'margin-top: -70px; padding-top: 0;' : ''}">
+    <div class="up-hero" style="position: relative; z-index: 2; ${settings.nyMode ? 'margin-top: -60px; padding-top: 0;' : ''}">
       ${avaHtml}
       <div class="up-name">${esc(username)}${verify}</div>
       <div class="up-handle">${esc(handle)}</div>
