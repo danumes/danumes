@@ -3475,93 +3475,73 @@ div[style*="tatnet.ru"] {
 
 
 /* ============================================================
-   НОВОГОДНИЙ ИВЕНТ — ИДЕАЛЬНЫЙ ДИЗАЙН (v3)
+   НОВОГОДНИЙ ИВЕНТ — ИДЕАЛЬНЫЙ ДИЗАЙН (v4)
    ============================================================ */
 
-/* 1. Красивый баннер с ёлкой и снегом */
+/* 1. Красивый баннер (Глубокий градиент) */
 .ny-profile-banner {
-  height: 180px;
+  height: 160px;
   width: 100%;
-  position: relative;
-  background: linear-gradient(to bottom, #001133 0%, #003366 100%);
-  overflow: hidden;
   border-radius: 16px 16px 0 0;
+  position: relative;
+  overflow: hidden;
+  /* Глубокий, дорогой синий градиент */
+  background: radial-gradient(circle at 50% 0%, #1e3a8a 0%, #0f172a 70%, #020617 100%);
+  box-shadow: inset 0 -20px 40px rgba(0,0,0,0.8);
 }
 
-/* Ёлка на фоне (рисуем через CSS) */
-.ny-profile-banner::before {
+/* 2. Падающий снег на баннере (как в реальности) */
+.ny-banner-snow::before {
   content: '';
   position: absolute;
-  right: 10%;
-  bottom: 0;
-  width: 140px;
-  height: 160px;
-  background: 
-    radial-gradient(circle at 50% 10%, #a7f3d0 2px, transparent 3px),
-    radial-gradient(circle at 30% 30%, #a7f3d0 2px, transparent 3px),
-    radial-gradient(circle at 70% 30%, #a7f3d0 2px, transparent 3px),
-    radial-gradient(circle at 50% 50%, #a7f3d0 3px, transparent 4px),
-    radial-gradient(circle at 20% 60%, #a7f3d0 2px, transparent 3px),
-    radial-gradient(circle at 80% 60%, #a7f3d0 2px, transparent 3px);
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  /* Сама форма ёлки */
-  clip-path: polygon(50% 0%, 80% 30%, 60% 30%, 90% 60%, 70% 60%, 100% 100%, 0% 100%, 30% 60%, 10% 60%, 40% 30%, 20% 30%);
-  background-color: #0f4a3a;
-  box-shadow: 0 0 20px rgba(167, 243, 208, 0.2);
+  inset: 0;
+  background-image: 
+    radial-gradient(circle, #fff 1.5px, transparent 2px),
+    radial-gradient(circle, #fff 1px, transparent 1.5px);
+  background-size: 50px 50px, 70px 70px;
+  background-position: 0 0, 20px 20px;
+  animation: ny-snow-fall 8s linear infinite;
+  opacity: 0.6;
   z-index: 1;
 }
 
-/* Звезда на ёлке */
-.ny-profile-banner::after {
-  content: '⭐';
-  position: absolute;
-  right: calc(10% + 55px);
-  top: 5px;
-  font-size: 24px;
-  text-shadow: 0 0 10px #fbbf24;
-  z-index: 2;
-  animation: ny-star-glow 2s infinite alternate;
-}
-
-@keyframes ny-star-glow {
-  0% { opacity: 0.7; transform: scale(1); }
-  100% { opacity: 1; transform: scale(1.1); }
-}
-
-/* Снег на баннере */
+/* Слой снега, который падает медленнее и плывет */
 .ny-banner-snow::after {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(white 1px, transparent 2px);
-  background-size: 40px 40px;
-  animation: ny-snow-fall 15s linear infinite;
-  opacity: 0.5;
-  z-index: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.6) 2px, transparent 3px);
+  background-size: 90px 90px;
+  background-position: 40px 10px;
+  animation: ny-snow-fall 12s linear infinite reverse;
+  opacity: 0.4;
+  z-index: 1;
 }
 
 @keyframes ny-snow-fall {
-  0% { transform: translateY(-40px); }
-  100% { transform: translateY(180px); }
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
 }
 
-/* 2. Обводка (как на фото — по кругу) */
+/* 3. Обводка (Идеально ровный круг) */
 .ny-ava-ring {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px;
+  padding: 0;
   z-index: 10;
+  /* Размер круга, от которого отталкиваются снежинки */
+  width: 96px; 
+  height: 96px;
 }
 
 /* Внутренняя аватарка */
 .ny-ava-ring > .up-ava,
 .ny-ava-ring > .ava {
   border-radius: 50%;
-  width: 90px;
-  height: 90px;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   background-size: cover;
   background-position: center;
@@ -3571,37 +3551,44 @@ div[style*="tatnet.ru"] {
   font-size: 36px;
   font-weight: 700;
   color: #fff;
-  /* Легкая ледяная окантовка */
-  border: 2px solid rgba(255, 255, 255, 0.3); 
-  box-shadow: 0 0 15px rgba(167, 139, 250, 0.4);
+  border: 2px solid rgba(167, 139, 250, 0.8); /* Фиолетовая окантовка */
+  box-shadow: 0 0 20px rgba(167, 139, 250, 0.5), inset 0 0 10px rgba(167, 139, 250, 0.3);
   position: relative;
   z-index: 2;
 }
 
-/* Снежинки по кругу */
+/* Снежинки вокруг */
 .ny-snowflake {
   position: absolute;
   color: #fff;
-  font-size: 18px;
-  text-shadow: 0 0 10px #a78bfa, 0 0 20px #fff;
+  font-size: 16px;
+  text-shadow: 0 0 8px #a78bfa, 0 0 15px #fff;
   pointer-events: none;
   z-index: 3;
-  animation: ny-breathe 2s ease-in-out infinite alternate;
+  /* Ставим их ровно в центр, а потом сдвигаем */
+  top: 50%;
+  left: 50%;
+  margin-top: -8px;
+  margin-left: -8px;
 }
 
-/* Позиционируем 8 снежинок вокруг аватарки 90x90 (радиус ~55px) */
-.ny-snowflake:nth-child(1) { top: -6px; left: 50%; transform: translateX(-50%); animation-delay: 0s; }
-.ny-snowflake:nth-child(2) { top: 12px; right: -6px; transform: translateX(50%); animation-delay: 0.25s; }
-.ny-snowflake:nth-child(3) { top: 50%; right: -12px; transform: translateY(-50%); animation-delay: 0.5s; }
-.ny-snowflake:nth-child(4) { bottom: 12px; right: -6px; transform: translateX(50%); animation-delay: 0.75s; }
-.ny-snowflake:nth-child(5) { bottom: -6px; left: 50%; transform: translateX(-50%); animation-delay: 1s; }
-.ny-snowflake:nth-child(6) { bottom: 12px; left: -6px; transform: translateX(-50%); animation-delay: 1.25s; }
-.ny-snowflake:nth-child(7) { top: 50%; left: -12px; transform: translateY(-50%); animation-delay: 1.5s; }
-.ny-snowflake:nth-child(8) { top: 12px; left: -6px; transform: translateX(-50%); animation-delay: 1.75s; }
+/* Идеальное распределение по кругу (каждые 45 градусов) */
+.ny-snowflake:nth-child(1) { transform: rotate(0deg) translate(54px) rotate(0deg); }
+.ny-snowflake:nth-child(2) { transform: rotate(45deg) translate(54px) rotate(-45deg); }
+.ny-snowflake:nth-child(3) { transform: rotate(90deg) translate(54px) rotate(-90deg); }
+.ny-snowflake:nth-child(4) { transform: rotate(135deg) translate(54px) rotate(-135deg); }
+.ny-snowflake:nth-child(5) { transform: rotate(180deg) translate(54px) rotate(-180deg); }
+.ny-snowflake:nth-child(6) { transform: rotate(225deg) translate(54px) rotate(-225deg); }
+.ny-snowflake:nth-child(7) { transform: rotate(270deg) translate(54px) rotate(-270deg); }
+.ny-snowflake:nth-child(8) { transform: rotate(315deg) translate(54px) rotate(-315deg); }
 
-@keyframes ny-breathe {
-  0% { opacity: 0.5; transform: scale(0.9); }
-  100% { opacity: 1; transform: scale(1.1); }
+/* Плавное мерцание снежинок */
+.ny-snowflake:nth-child(odd) { animation: ny-twinkle 2s ease-in-out infinite alternate; }
+.ny-snowflake:nth-child(even) { animation: ny-twinkle 2s ease-in-out infinite alternate-reverse; }
+
+@keyframes ny-twinkle {
+  0% { opacity: 0.4; filter: drop-shadow(0 0 2px #fff); }
+  100% { opacity: 1; filter: drop-shadow(0 0 10px #fff); }
 }
 /* ============================================================
    КОНЕЦ
