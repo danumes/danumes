@@ -4373,8 +4373,8 @@ function renderUserProfile(user) {
 
   // Новогодний баннер
   let bannerHtml = '';
-  if (settings.nyMode && settings.nyBanner) {
-    bannerHtml = `<div class="ny-profile-banner"></div>`;
+  if (settings.nyMode) {
+    bannerHtml = `<div class="ny-profile-banner ny-banner-${settings.nyBanner || 'default'}"></div>`;
   }
    
   body.innerHTML = `
