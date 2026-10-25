@@ -255,8 +255,14 @@ function applySettings() {
   setOn('liveBgSwitch', settings.liveBg);
      // Новогодний режим
   setOn('nyModeSwitch', settings.nyMode);
+   
   setTxt('nyModeSub', settings.nyMode ? 'Включён' : 'Выключен');
-  
+
+  const nyBannerItem = $('nyBannerItem');
+  if (nyBannerItem) {
+    nyBannerItem.style.display = settings.nyMode ? 'flex' : 'none';
+  }
+   
   const nyBanner = $('nyBanner');
   if (nyBanner) nyBanner.style.display = settings.nyMode ? 'flex' : 'none';
   
@@ -3591,6 +3597,36 @@ function showPicker(title, options, onSelect) {
   document.body.appendChild(p);
   p.querySelectorAll('[data-value]').forEach(i => i.onclick = () => { onSelect(i.dataset.value); p.remove(); });
   setTimeout(() => { document.addEventListener('click', function close(e) { if (!p.contains(e.target)) { p.remove(); document.removeEventListener('click', close); } }); }, 10);
+}
+
+function initNyBanners() {
+  $('nyBannerItem') && ($('nyBannerItem').onclick = () => {
+    const banners = [
+      { id: 'default', name: 'Стандартный (Градиент)' },
+      { id: 'snow', name: 'Снежная ночь' },
+      { id: 'lights', name: 'Гирлянды' },
+      { id: 'space', name: 'Космос' }
+    ];
+    
+    // Используем твою функцию showPicker, если она есть, или делаем простой цикл
+    if (typeof showPicker === 'function') {
+      showPicker('Выбери баннер', banners.map(b => ({
+        label: b.name,
+        value: b.id,
+        active: settings.nyBanner === b.id
+      })), v => {
+        settings.nyBanner = v;
+        applySettings();
+        saveSettingsToServer();
+        toast('Баннер изменён');
+      });
+    } else {
+      // Запасной вариант, если showPicker нет
+      settings.nyBanner = settings.nyBanner === 'default' ? 'snow' : 'default';
+      applySettings();
+      saveSettingsToServer();
+    }
+  });
 }
 
 function initSettings() {
