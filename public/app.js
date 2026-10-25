@@ -125,7 +125,9 @@ const DEFAULT_SETTINGS = {
   wallpaper: null, minimalMode: false, liveBg: false, vibration: true,
   liveReactions: true, nyMode: false,
   nyAvaRing: true, // Новая настройка: обводка
-  nyBanner: 'default' // Новая настройка: баннер
+  nyMode: false,
+  nyAvaRing: true, 
+  nyBanner: 'default', // 'default', 'snow', 'lights', 'space'
 };
 let settings = Object.assign({}, DEFAULT_SETTINGS, JSON.parse(localStorage.getItem('danumes.settings') || '{}'));
 
