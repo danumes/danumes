@@ -4441,6 +4441,7 @@ function initAll() {
   initMessageInteractions();
   initHotkeys();
   initScheduledPosts();
+  initNyBanners(); // <--- ДОБАВЬ ВОТ ЭТУ СТРОКУ
    
      // Кнопка закрытия профиля
   $('upClose') && ($('upClose').onclick = closeUserProfile);
