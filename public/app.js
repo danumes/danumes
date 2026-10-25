@@ -4384,14 +4384,12 @@ function renderUserProfile(user) {
   // Новогодний баннер
   let bannerHtml = '';
   if (settings.nyMode) {
-    // Если баннер выбран - показываем, иначе ставим дефолтный
-    const bType = settings.nyBanner || 'snow';
-    bannerHtml = `<div class="ny-profile-banner ny-banner-${bType}"></div>`;
+    bannerHtml = `<div class="ny-profile-banner ny-banner-snow"></div>`;
   }
 
   body.innerHTML = `
     ${bannerHtml}
-    <div class="up-hero" style="${settings.nyMode ? 'margin-top: -40px; position: relative; z-index: 2; padding-top: 0;' : ''}">
+    <div class="up-hero" style="position: relative; z-index: 2; ${settings.nyMode ? 'margin-top: -70px; padding-top: 0;' : ''}">
       ${avaHtml}
       <div class="up-name">${esc(username)}${verify}</div>
       <div class="up-handle">${esc(handle)}</div>
